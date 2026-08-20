@@ -11,6 +11,9 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+// Side-effect import, and it has to precede core.mjs — that module reads its
+// configuration at import time, and ES modules execute in written order.
+import "./env.mjs";
 import { handle, UPSTREAM } from "./core.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
