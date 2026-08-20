@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build output — regenerate with `npm run build`.
+# The README tells people to open dist/index.html, so if you want the built file
+# to travel with the repo, delete this line and commit it deliberately.
+dist/
+
+# TypeScript incremental build state
+*.tsbuildinfo
+
+# local config and secrets — the proxy reads PUNCH_* vars from the environment,
+# and none of them belong in the repository
+.env
+.env.*
+!.env.example
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
