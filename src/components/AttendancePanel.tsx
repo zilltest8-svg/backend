@@ -239,7 +239,7 @@ export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
             whileTap={api.syncing ? {} : { scale: 0.975 }}
             onClick={() => void api.startSync()}
             disabled={api.syncing}
-            title="Pull new punches off the devices, then reload"
+            title={`Pull punches off the devices for ${api.startDate} to ${api.endDate}, then reload`}
           >
             <StopwatchIcon width={14} height={14} />
             {api.syncing ? "Syncing…" : "Sync now"}
@@ -331,6 +331,13 @@ export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
             exit={{ opacity: 0, height: 0 }}
           >
             <b>{api.sync.message}</b>
+            {/* The range the HR side reports back, so what was actually pulled
+                is on screen rather than only in the request. */}
+            <span>
+              {api.sync.range.start === api.sync.range.end
+                ? api.sync.range.start
+                : `${api.sync.range.start} → ${api.sync.range.end}`}
+            </span>
             <span>
               {api.sync.devices
                 .map((d) => `${d.name}: ${d.totalRecords} read, ${d.newRecords} new`)

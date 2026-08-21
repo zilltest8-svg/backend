@@ -119,6 +119,12 @@ export interface SyncResult {
   message: string;
   newRecords: number;
   devices: SyncDevice[];
+  /**
+   * The range the pull actually covered, read back from the API's own
+   * `filters` rather than from what we sent — so the strip on screen reports
+   * what the HR side did, not merely what was asked of it.
+   */
+  range: { start: string; end: string };
   at: number;
   raw: unknown;
 }
@@ -131,6 +137,7 @@ export async function runSync(startDate: string, endDate: string): Promise<SyncR
   });
   const bag = isBag(body.data) ? body.data : {};
   const devices = Array.isArray(bag.devices) ? bag.devices.filter(isBag) : [];
+  const filters = isBag(bag.filters) ? bag.filters : {};
 
   return {
     status: typeof bag.status === "string" ? bag.status : "unknown",
@@ -142,6 +149,10 @@ export async function runSync(startDate: string, endDate: string): Promise<SyncR
       totalRecords: numberOr(d.total_records, 0),
       newRecords: numberOr(d.new_records_added, 0),
     })),
+    range: {
+      start: pickString(filters, ["start_date"]) ?? startDate,
+      end: pickString(filters, ["end_date"]) ?? endDate,
+    },
     at: Date.now(),
     raw: body.data,
   };
