@@ -20,9 +20,27 @@
  */
 import { createCipheriv, createDecipheriv, randomBytes, createHash, timingSafeEqual } from "node:crypto";
 
-const env = (name, fallback) => process.env[name] ?? fallback;
+/**
+ * `??` alone is wrong here: it falls back on null and undefined but not on "",
+ * and a variable added in a hosting dashboard with the value left blank arrives
+ * as an empty string. That silently wiped the default and left fetch() with an
+ * empty URL — "Failed to parse URL from" — rather than any hint at the cause.
+ */
+const env = (name, fallback) => {
+  const value = process.env[name];
+  return value == null || value.trim() === "" ? fallback : value.trim();
+};
 
 export const UPSTREAM = env("PUNCH_API_BASE", "https://api.hr.zilmoney.com").replace(/\/+$/, "");
+
+// An upstream that is not absolute cannot be fetched, and the failure surfaces
+// far from its cause. Say so here instead.
+if (!/^https?:\/\//i.test(UPSTREAM)) {
+  throw new Error(
+    `PUNCH_API_BASE must be an absolute http(s) URL — got "${UPSTREAM}". ` +
+      "Either unset it to use the default, or give it a full URL.",
+  );
+}
 export const LOGIN_PATH = env("PUNCH_LOGIN_PATH", "/api/auth/login");
 export const SYNC_PATH = env("PUNCH_SYNC_PATH", "/api/attendance/my-sync");
 export const SYNC_STATUS_PATH = env("PUNCH_SYNC_STATUS_PATH", "/api/attendance/my-sync-status");
