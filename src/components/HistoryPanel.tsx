@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
-import { ChevronIcon, PlusIcon, SheetIcon } from "./Icons";
+import { ChevronIcon, DownloadIcon, PlusIcon, SheetIcon } from "./Icons";
 import { daysInMonth, monthsOf, totalsOf, type DayEntry } from "../history";
 import type { Block, Filter } from "../types";
 import {
@@ -25,6 +25,8 @@ interface Props {
   onFilter: (patch: Partial<Filter>) => void;
   onDeleteDay: (key: string) => void;
   onClearAll: () => void;
+  /** Save the days currently on screen as a PDF. */
+  onDownload: (days: DayEntry[], scope: string) => void;
   /** Opens the day sheet for that date. */
   onEdit: (key: string) => void;
 }
@@ -144,12 +146,14 @@ export function HistoryPanel({
   onFilter,
   onDeleteDay,
   onClearAll,
+  onDownload,
   onEdit,
 }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const months = monthsOf(days);
   const visible = daysInMonth(days, filter.month).filter((d) => matches(d, query));
   const totals = totalsOf(visible);
+  const scope = filter.month === "all" ? "All stored days" : monthLabelFromKey(filter.month);
 
   // A month or day saved in the filter can outlive its data — deleting the last
   // day of August leaves `2026-08` selected with nothing to select it from. Keep
@@ -166,11 +170,22 @@ export function HistoryPanel({
     >
       <div className="card-head" style={{ marginBottom: 14 }}>
         <h2 style={{ margin: 0 }}>History</h2>
-        {days.length > 0 && (
-          <button className="link-btn" onClick={onClearAll}>
-            Clear history
+        <div className="head-actions">
+          <button
+            className="btn sm"
+            disabled={visible.length === 0}
+            title={`Download the ${visible.length} ${visible.length === 1 ? "day" : "days"} shown below as a PDF`}
+            onClick={() => onDownload(visible, scope)}
+          >
+            <DownloadIcon width={14} height={14} />
+            Download PDF
           </button>
-        )}
+          {days.length > 0 && (
+            <button className="link-btn" onClick={onClearAll}>
+              Clear history
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="pair">

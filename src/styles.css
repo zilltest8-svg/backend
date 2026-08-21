@@ -318,6 +318,7 @@ select.select option { background: var(--card); color: var(--ink); }
   background: none; border: 0; color: var(--accent); font-size: 12px; font-weight: 600;
   cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px;
 }
+.head-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .link-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid { display: grid; gap: 16px; }

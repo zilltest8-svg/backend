@@ -20,7 +20,9 @@ import { Telemetry } from "./components/Telemetry";
 import { Toast, type ToastAction, type ToastMsg } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
 import { computeDay, mergeSessions, parsePayload, replaceDay, shiftToToday } from "./compute";
-import { buildHistory, resolveDay } from "./history";
+import { saveBlob } from "./export";
+import { buildHistory, resolveDay, totalsOf, type DayEntry } from "./history";
+import { historyPdf, historyPdfFilename } from "./historyPdf";
 import { MIN, dateLabel, dayKey, minutesFromInput, startOfDayKey, startOfToday } from "./time";
 import type { DayResult, Session } from "./types";
 import { useAttendance } from "./useAttendance";
@@ -183,6 +185,17 @@ export default function App() {
     say("History cleared.", true);
   }, [say, setFilter, setSessions, store.sessions.length]);
 
+  /** The days on screen in the history panel, saved as a PDF report. */
+  const handleDownloadPdf = useCallback(
+    (list: DayEntry[], scope: string) => {
+      if (list.length === 0) return say("Nothing to download yet.", false);
+      const meta = { scope, query, at: Date.now() };
+      saveBlob(historyPdf(list, totalsOf(list), meta), historyPdfFilename(meta));
+      say(`PDF downloaded — ${list.length} ${list.length === 1 ? "day" : "days"}.`, true);
+    },
+    [query, say],
+  );
+
   const sheet = useSheet(day, say, canPersist);
   // Passing the view in keeps it from checking the session or hitting the HR
   // API until someone actually opens the screen.
@@ -343,6 +356,7 @@ export default function App() {
               onFilter={setFilter}
               onDeleteDay={handleDeleteDay}
               onClearAll={handleClearAll}
+              onDownload={handleDownloadPdf}
               onEdit={(key) => setSheetKey(key || dayKey(Date.now()))}
             />
           </div>

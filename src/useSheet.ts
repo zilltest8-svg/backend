@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { csvFilename, toCSV, toPayload, toRows, toTSV } from "./export";
+import { csvFilename, saveBlob, toCSV, toPayload, toRows, toTSV } from "./export";
 import { DEFAULT_SHEET_ID, sheetIdFrom } from "./appsScript";
 import type { DayResult } from "./types";
 
@@ -354,15 +354,7 @@ export function useSheet(
 
   const downloadCsv = useCallback(() => {
     if (empty) return say("Nothing to download yet.", false);
-    const blob = new Blob([toCSV(day)], { type: "text/csv;charset=utf-8;" });
-    const href = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = href;
-    a.download = csvFilename(day);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(href);
+    saveBlob(new Blob([toCSV(day)], { type: "text/csv;charset=utf-8;" }), csvFilename(day));
     say("CSV downloaded.", true);
   }, [day, empty, say]);
 

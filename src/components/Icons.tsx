@@ -202,6 +202,13 @@ export const BriefcaseIcon = (p: P) => (
   </svg>
 );
 
+export const DownloadIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 4v10m0 0 4-4m-4 4-4-4" />
+    <path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17" />
+  </svg>
+);
+
 export const DotsIcon = (p: P) => (
   <svg {...base(p)} strokeWidth={2}>
     <circle cx="12" cy="5" r="1" />

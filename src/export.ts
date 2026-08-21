@@ -83,6 +83,18 @@ export function toPayload(day: DayResult): { headers: string[]; rows: string[][]
   return { headers: [...SHEET_HEADERS], rows: toRows(day) };
 }
 
+/** Hand a blob to the browser as a file download. */
+export function saveBlob(blob: Blob, filename: string): void {
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(href);
+}
+
 export function csvFilename(day: DayResult): string {
   const stamp = day.first == null ? "day" : dateDMY(day.first).replace(/\//g, "-");
   return `office-time-${stamp}.csv`;
