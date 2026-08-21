@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { CheckIcon, LoginIcon, SheetIcon, StarIcon } from "./Icons";
+import { CheckIcon, SheetIcon, StarIcon } from "./Icons";
 import type { DayResult } from "../types";
-import { clockTime, hm } from "../time";
+import { hm } from "../time";
 
 interface Cell {
   icon: ReactNode;
@@ -23,21 +23,11 @@ interface Props {
 }
 
 export function StatsStrip({ day, onSave, saved }: Props) {
-  const firstIn = day.first == null ? "--:--" : clockTime(day.first);
-  const [inTime, inMer] = firstIn.split(" ");
-
-  // Worked, Break and Remaining used to sit here too. They now live in the HR
-  // panel at the top of the dashboard as Today, Break and Pace, and repeating
-  // them a few hundred pixels lower said the same thing twice.
-  const cells: Cell[] = [
-    {
-      icon: <LoginIcon />,
-      tone: "green",
-      label: "First in",
-      value: inTime ?? "--:--",
-      unit: inMer ?? "",
-    },
-  ];
+  // Worked, Break, Remaining and First in all used to sit here. Every one of
+  // them is now in the HR panel at the top of the dashboard, reading the same
+  // day, so this row is down to what is genuinely only here: overtime once
+  // there is any, and the button into the day sheet.
+  const cells: Cell[] = [];
 
   if (day.overtime > 0) {
     cells.push({ icon: <StarIcon />, tone: "red", label: "Overtime", value: hm(day.overtime), unit: "hours" });
