@@ -4,7 +4,7 @@ import { CodeIcon, LoginIcon, SheetIcon, StopwatchIcon, TrendIcon } from "./Icon
 import { HrLoginModal } from "./HrLoginModal";
 import { computeDay } from "../compute";
 import { AUTO_SYNC_MS, type AttendanceApi } from "../useAttendance";
-import { MIN, clockShort, hoursMinutes, human } from "../time";
+import { MIN, clockShort, clockTime, hoursMinutes, human } from "../time";
 import { useNow } from "../useStore";
 
 const p2 = (n: number): string => (n < 10 ? `0${n}` : String(n));
@@ -114,7 +114,23 @@ export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
 
   const onBreak = day.status === "break";
 
+  // Straight off the response's earliest punch_in, not the store — the store is
+  // empty until Apply is pressed, which is why this read "--:--" while the
+  // response plainly carried a punch-in time.
+  const [firstTime, firstMer] = (day.first == null ? "--:--" : clockTime(day.first)).split(" ");
+
   const cells = [
+    {
+      key: "first",
+      label: "First in",
+      value: firstTime ?? "--:--",
+      tail: firstMer,
+      note:
+        day.first == null
+          ? "not punched in yet"
+          : `${day.sessions.length} punch${day.sessions.length === 1 ? "" : "es"} today`,
+      tone: "",
+    },
     {
       key: "today",
       label: "Today",
