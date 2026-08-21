@@ -181,6 +181,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
  * the HR app was built from, so accept any of the usual ones. This API happens
  * to send none, and authenticates by cookie instead.
  */
+//added data
 function pluckToken(payload) {
   const seen = new Set();
   const walk = (node, depth) => {
