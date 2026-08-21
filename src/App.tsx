@@ -200,15 +200,25 @@ export default function App() {
   }, [attendance.today, handleLoad]);
 
   /**
-   * On `always`, every fetch flows into the dashboard by itself — that is what
-   * makes it live rather than a panel sitting next to stale numbers. Keyed on
-   * `fetchedAt` so it runs once per response instead of on every clock tick,
-   * and silent, because `handleLoad`'s toast every minute would be unbearable.
+   * Every fetch flows into the store by itself, so the whole dashboard reads
+   * the HR response — the ring and Time in office, First in, Sessions & Breaks,
+   * Efficiency, and the exit time — rather than only the panel at the top while
+   * everything below sits at zero.
+   *
+   * `my-today` carrying `sessions_today` already means "this is the authority
+   * for that day" in `parsePayload`, so taking it as truth is the existing rule
+   * rather than a new one. The cost is that hand-edits to today are replaced by
+   * the next fetch; Apply to Dashboard is still there to redo it on demand.
+   *
+   * Keyed on `fetchedAt` so it runs once per response rather than on every
+   * clock tick, and silent, because a toast every minute would be unbearable.
    */
   const appliedAt = useRef(0);
   useEffect(() => {
     const at = attendance.fetchedAt;
-    if (attendance.syncMode !== "always" || at == null || at === appliedAt.current) return;
+    if (at == null || at === appliedAt.current) return;
+    // An empty response never wipes the day — before the first punch of the
+    // morning my-today has nothing, and that is not a reason to erase punches.
     if (!attendance.today?.sessions.length) return;
     appliedAt.current = at;
     const parsed = parsePayload(JSON.stringify(attendance.today.raw));
@@ -216,13 +226,9 @@ export default function App() {
       parsed.full ? replaceDay(prev, parsed.sessions) : mergeSessions(prev, parsed.sessions),
     );
     if (parsed.target) setSettings({ target: parsed.target });
-  }, [
-    attendance.fetchedAt,
-    attendance.syncMode,
-    attendance.today,
-    setSessions,
-    setSettings,
-  ]);
+    // Deliberately no setFilter here: yanking the view back to today while
+    // someone is reading an older day would be rude.
+  }, [attendance.fetchedAt, attendance.today, setSessions, setSettings]);
 
   /** Move only the day on screen — the other stored days must stay where they are. */
   const handleShift = useCallback(() => {
