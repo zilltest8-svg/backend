@@ -32,15 +32,6 @@ const env = (name, fallback) => {
 };
 
 export const UPSTREAM = env("PUNCH_API_BASE", "https://api.hr.zilmoney.com").replace(/\/+$/, "");
-
-// An upstream that is not absolute cannot be fetched, and the failure surfaces
-// far from its cause. Say so here instead.
-if (!/^https?:\/\//i.test(UPSTREAM)) {
-  throw new Error(
-    `PUNCH_API_BASE must be an absolute http(s) URL — got "${UPSTREAM}". ` +
-      "Either unset it to use the default, or give it a full URL.",
-  );
-}
 export const LOGIN_PATH = env("PUNCH_LOGIN_PATH", "/api/auth/login");
 export const SYNC_PATH = env("PUNCH_SYNC_PATH", "/api/attendance/my-sync");
 export const SYNC_STATUS_PATH = env("PUNCH_SYNC_STATUS_PATH", "/api/attendance/my-sync-status");
@@ -366,7 +357,37 @@ export async function today(cookieHeader) {
  * Dispatches one request. `route` is the part after `/api/punch/`.
  * Returns `{status, body, cookie?}`; `null` when nothing matches.
  */
+/**
+ * Configuration that makes any request impossible, by variable NAME only —
+ * these messages reach the browser, so no value is ever quoted back.
+ *
+ * Checked per request rather than at import: a module-level throw on a
+ * serverless host crashes the function before it can answer, so the caller
+ * sees an opaque 500 and the reason reaches only the platform log.
+ */
+export function configProblems() {
+  const problems = [];
+  if (!/^https?:\/\//i.test(UPSTREAM)) {
+    problems.push("PUNCH_API_BASE must be an absolute http(s) URL, or left unset to use the default");
+  }
+  if (!SECRET) problems.push("PUNCH_SECRET is not set");
+  return problems;
+}
+
 export async function handle(route, method, cookieHeader, readBody) {
+  const problems = configProblems();
+  if (problems.length) {
+    return {
+      status: 500,
+      body: {
+        error:
+          "Server configuration problem: " +
+          problems.join("; ") +
+          ". Set it in the hosting environment and redeploy.",
+      },
+    };
+  }
+
   if (route === "login" && method === "POST") return login(await readBody());
   if (route === "session" && method === "GET") return session(cookieHeader);
   if (route === "logout" && method === "POST") return logout();
