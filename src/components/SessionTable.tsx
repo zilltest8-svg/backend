@@ -73,7 +73,7 @@ export function SessionTable({ day, onDelete, onAdd, sheet }: Props) {
         <AnimatePresence initial={false}>
           {rows.length === 0 && (
             <motion.div key="empty" className="empty-row" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              No sessions yet — start the timer, add one manually, or paste a response.
+              No sessions yet — they arrive with the next HR sync, or add one manually.
             </motion.div>
           )}
 

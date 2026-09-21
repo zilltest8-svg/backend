@@ -15,21 +15,24 @@ Open **`dist/index.html`** — double-click it. One self-contained file, no serv
 no internet needed. Your sessions are saved in the browser, so they survive a refresh.
 Every day you load is kept, not just the current one — see **History** below.
 
-The app is a sidebar shell — **Chronos / Deep Work Mode** — with five places to be.
+The app is a sidebar shell — **Zil Time** — with five places to be. It is black
+and white throughout, with raised, lit-from-above surfaces.
 The mark beside the name is the same open ring the dashboard draws, and its tip
-pulses while a session is running; it doubles as the browser-tab icon.
+pulses while a session is running.
 
 | | |
 |---|---|
-| **Dashboard** | the **HR live** panel at the top ([details](#live-attendance-hr-api)), then the ring counter, date and exit cards, the four stat tiles, Sessions & Breaks, Efficiency, and **Raw Telemetry** (the JSON box — paste an API response over it) |
+| **Dashboard** | the **HR live** panel at the top ([details](#live-attendance-hr-api)), then the ring counter, date and exit cards, the four stat tiles, Sessions & Breaks and Efficiency |
 | **Insights** | what the day says: session lengths, break pattern, what has pushed the exit, plus totals across every stored day |
 | **History** | the month/day filter and every stored day; tap one to open it up |
 | **Export** | pick which stored day to save, then Drive / CSV / spreadsheet |
 | **Settings** | work target and free-break minutes, and clearing stored data |
 
-**Start Timer** in the sidebar punches you in at that minute; while a session is
-open it becomes **Stop Timer** and punches you out. The search box at the top
-searches stored days — `18 aug`, `august`, `2026-08`, `wed`.
+There is no start/stop timer: punches arrive from the HR API by themselves
+(see [Live attendance](#live-attendance-hr-api)), and the foot of the sidebar
+shows whether that sync is working. A day is marked **Saved** in History as soon
+as every session on it is punched out; punching back in returns it to *In
+progress* until the next punch-out.
 
 **Add session** (on the dashboard, and in Export) takes a **date** as well as the
 punch times, so a day can be typed in from scratch — including a date you have
@@ -96,20 +99,13 @@ day that was signed off.
 
 ## The 3D bits
 
-Three pieces are WebGL, drawn with **three.js**:
+Two pieces are WebGL, drawn with **three.js**:
 
 - **The timer ring** — a torus whose progress arc is a shader that discards the
   fragments past the current angle, so filling it costs one uniform rather than a
-  new geometry each frame. The head sphere rides the end of the arc, the colour
-  eases between white, amber and green as the day changes state, and it pulses
+  new geometry each frame. The head sphere rides the end of the arc, the shade
+  eases between white and grey as the day changes state, and it pulses
   while the clock is running.
-- **The thread in Time in office** — a hairline with three small beads travelling
-  along it, in the empty half of the card. Deliberately almost nothing: the beads
-  move at the speed of the day — travelling while you work, nearly stopped on a
-  break, still when you are punched out — and take the colour of the state.
-- **The backdrop** — a drifting shell of additive points behind the whole app,
-  tinted by what the day is doing, with two soft glows and a little pointer
-  parallax. Deliberately dim: it sits behind text.
 - **Insights → Last N stored days** — work and break columns per day against the
   goal line, on a long lens so the outer columns stay upright.
 
@@ -124,22 +120,15 @@ Three.js is why `dist/index.html` is ~890 kB (~247 kB gzipped) rather than ~360 
 
 ## Cookies & storage
 
-On the first visit a banner asks before anything is kept in the browser, with
-**Allow cookies** and **Reject**. Being straight about what it covers: the app
-sets **no cookies**, loads no third party and sends nothing anywhere — the only
-thing to consent to is this browser holding your own data between visits.
+Saving is automatic: punches, settings and the Apps Script connection are
+written to local storage without being asked for, including what the HR sync
+brings in every minute. The app sets **no cookies**, loads no third party and
+sends nothing anywhere else.
 
-- **Allow** — punches, settings and the Apps Script connection are written to
-  local storage. The current session is flushed the moment you press it.
-- **Reject** — nothing is written, and everything already saved is deleted
-  (`otc.v3`, the older `otc.v2`/`otc.v1`, and the export connection keys). The
-  app keeps working for the session; closing the tab loses the day.
-
-Only the answer itself is remembered, under `otc.consent`, so the question is
-asked once rather than on every reload. It can be changed either way later in
-**Settings → Cookies & storage**. Until it is answered nothing is written, but
-data already in the browser is still *read* — dropping it would be silent data
-loss, and rejecting deletes it explicitly.
+**Settings → Storage → Stop & wipe** turns saving off and deletes everything
+already saved (`otc.v3`, the older `otc.v2`/`otc.v1`, and the export connection
+keys); the app keeps working for the session. **Save in this browser** turns it
+back on. Only that choice is remembered, under `otc.consent`.
 
 ## Google Sheets
 
@@ -182,12 +171,13 @@ The **HR live** panel sits at the top of the Dashboard. It signs in to the HR
 API and shows what that API says, so it needs a server component — the rest of
 the app does not.
 
-- **Sync** — `Only when I tap` (nothing is fetched until **Sync now**) or
-  `Always` (re-syncs every 60s while the Dashboard is open, quietly).
-- **Sync now** — runs a device pull, then re-reads today.
-- **Apply to Dashboard** — loads the punches into the store, so the ring, stat
-  tiles, Sessions & Breaks, History and Export all show them. On `Always` this
-  happens by itself after every fetch, which is what makes the dashboard live.
+- **Automatic sync** — while signed in, a device pull runs straight away and
+  then every 60s, on any screen, followed each time by a re-read of today. What
+  comes back goes into the store by itself, so the ring, tiles, Sessions &
+  Breaks, History and Export are all live. A bar under the header counts down
+  to the next one. Automatic failures show on the panel rather than as a toast.
+- **Sync now** — the same thing, out of turn.
+- The sign-in dialog opens by itself once; after that, use **Sign in to HR**.
 - The four tiles carry **live seconds** on whichever value is actually moving —
   worked while you work, break while you are on one, and the exit time only once
   a break is past the free allowance and genuinely pushing it back.
@@ -310,23 +300,19 @@ src/
   App.tsx                shell, view switching, handlers
   components/
     Logo.tsx             the mark — the timer ring reduced to 20px
-    Sidebar.tsx          brand, nav, Start/Stop Timer
-    TopBar.tsx           day search + the day being viewed
+    Sidebar.tsx          brand, nav, live-sync status
+    TopBar.tsx           the day being viewed
     Hero.tsx             ring counter, progress, status, date card, exit card
     Counter.tsx          count-up with per-place digit roll
     StatsStrip.tsx       worked / break / remaining / first in (/ overtime)
     SessionTable.tsx     sessions & derived breaks, Add Manual, Save Day
     Efficiency.tsx       percentage + donut
-    Telemetry.tsx        the raw payload panel — and the JSON paste box
     StatusBar.tsx        the verdict line under the dashboard
     Insights.tsx         per-day facts + totals across stored days
     HistoryPanel.tsx     month/day filter, stored days, tap to open one up
     DaySheetModal.tsx    the editable day sheet — punches, breaks, totals, submit
-    Settings.tsx         work target, free break, consent, clear stored data
-    ConsentBanner.tsx    the allow/reject banner asked once
+    Settings.tsx         work target, free break, storage on/off, clear stored data
     TimerRing3D.tsx      the WebGL progress ring
-    TimerThread3D.tsx    the hairline and beads in the Time in office card
-    Backdrop3D.tsx       the drifting particle field behind the app
     DayBars3D.tsx        work and break columns per stored day
     Icons.tsx            inline SVG icon set
     AttendancePanel.tsx  the HR live panel on the dashboard — sync controls, tiles

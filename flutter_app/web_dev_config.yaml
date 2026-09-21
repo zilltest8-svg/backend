@@ -1,0 +1,14 @@
+# `flutter run -d chrome` reads this. The HR API only allow-lists
+# https://hr.zilmoney.com as a CORS origin, so the browser can never call it
+# directly, and the session is an httpOnly cookie that only works same-origin.
+# So in development everything under /api/punch is forwarded, server-side, to
+# the live backend — the page still sees it as its own origin.
+#
+# To develop against a local proxy instead (`npm run server` in the repo root),
+# change the target to "http://127.0.0.1:8787".
+server:
+  port: 5173
+  proxy:
+    - target: "https://backend-sigma-seven-ta21oxlec0.vercel.app"
+      prefix: "/api/punch/"
+      replace: "/api/punch/"

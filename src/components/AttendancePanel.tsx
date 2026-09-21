@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { CodeIcon, LoginIcon, SheetIcon, StopwatchIcon, TrendIcon } from "./Icons";
+import { LoginIcon, StopwatchIcon } from "./Icons";
 import { HrLoginModal } from "./HrLoginModal";
 import { computeDay } from "../compute";
 import { AUTO_SYNC_MS, type AttendanceApi } from "../useAttendance";
@@ -35,21 +35,42 @@ interface Props {
   api: AttendanceApi;
   /** The user's own free-break allowance, from Settings. */
   freeMinutes: number;
-  /** Loads these punches into the store, the same route the JSON box takes. */
-  onApply: () => void;
 }
 
-export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
+/**
+ * How long until the next automatic sync, as a bar that fills over the minute
+ * and starts again when the HR API has been called.
+ */
+function NextSyncBar({ api, now }: { api: AttendanceApi; now: number }) {
+  const left = Math.min(AUTO_SYNC_MS, Math.max(0, (api.nextSyncAt ?? now) - now));
+  const busy = api.syncing || api.loading;
+  const filled = busy ? 1 : 1 - left / AUTO_SYNC_MS;
+  return (
+    <div className={`next-sync${busy ? " busy" : ""}`}>
+      <i />
+      <span className="label">{busy ? "Syncing…" : `Next sync in ${Math.ceil(left / 1000)}s`}</span>
+      <div className="track">
+        {/* Eased between ticks so it glides, and drops back quickly on a new minute. */}
+        <span style={{ width: `${filled * 100}%`, transitionDuration: filled < 0.05 ? "0.25s" : "1s" }} />
+      </div>
+    </div>
+  );
+}
+
+export function AttendancePanel({ api, freeMinutes }: Props) {
   const now = useNow();
-  const [rawOpen, setRawOpen] = useState(false);
   const [askLogin, setAskLogin] = useState(false);
 
-  // Opening the screen while signed out puts the modal up on its own; dismissing
-  // it leaves the prompt below, so there is always a way back in.
-  const signedOut = api.auth === "signed-out";
+  // Finding itself signed out puts the modal up once; dismissing it leaves the
+  // prompt below, so there is always a way back in. The "asked" flag lives on
+  // the hook, because this panel is remounted on every visit to the dashboard.
+  const shouldAsk = api.auth === "signed-out" && !api.askedLogin;
+  const { markAskedLogin } = api;
   useEffect(() => {
-    if (signedOut) setAskLogin(true);
-  }, [signedOut]);
+    if (!shouldAsk) return;
+    markAskedLogin();
+    setAskLogin(true);
+  }, [shouldAsk, markAskedLogin]);
 
   // The punches from my-today go through the same calculator as the rest of the
   // app, so worked, break, remaining and the exit time are one implementation.
@@ -239,68 +260,18 @@ export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
             whileTap={api.syncing ? {} : { scale: 0.975 }}
             onClick={() => void api.startSync()}
             disabled={api.syncing}
-            title={`Pull punches off the devices for ${api.startDate} to ${api.endDate}, then reload`}
+            title={`Do not wait for the next automatic sync — pull ${api.startDate} to ${api.endDate} now`}
           >
             <StopwatchIcon width={14} height={14} />
             {api.syncing ? "Syncing…" : "Sync now"}
           </motion.button>
-          <button className="btn sm" onClick={api.refresh} disabled={api.loading}>
-            <TrendIcon width={14} height={14} />
-            {api.loading ? "Loading…" : "Refresh"}
-          </button>
-          <motion.button
-            className="btn sm"
-            whileHover={day.sessions.length ? { scale: 1.015 } : {}}
-            whileTap={day.sessions.length ? { scale: 0.975 } : {}}
-            onClick={onApply}
-            disabled={day.sessions.length === 0}
-            title="Copy these punches into the dashboard, history and export"
-          >
-            <SheetIcon width={14} height={14} />
-            Apply to Dashboard
-          </motion.button>
-          <button
-            className={`btn sm icon-only${rawOpen ? " on" : ""}`}
-            onClick={() => setRawOpen((v) => !v)}
-            disabled={api.today == null}
-            title={rawOpen ? "Hide the raw HR response" : "Show the raw HR response"}
-            aria-expanded={rawOpen}
-            aria-label="Raw HR response"
-          >
-            <CodeIcon width={14} height={14} />
-          </button>
           <button className="btn sm ghost" onClick={() => void api.signOut()}>
             Sign out
           </button>
         </div>
       </div>
 
-      <div className="sync-mode">
-        <span className="k">Sync</span>
-        {(
-          [
-            { id: "tap", label: "Only when I tap", hint: "Sync now is the only thing that calls the API" },
-            { id: "always", label: "Always", hint: `re-syncs every ${AUTO_SYNC_MS / 1000}s while this screen is open` },
-          ] as const
-        ).map((option) => (
-          <label key={option.id} className={api.syncMode === option.id ? "on" : ""} title={option.hint}>
-            <input
-              type="radio"
-              name="hr-sync-mode"
-              value={option.id}
-              checked={api.syncMode === option.id}
-              onChange={() => api.setSyncMode(option.id)}
-            />
-            <i />
-            {option.label}
-          </label>
-        ))}
-        <span className="s">
-          {api.syncMode === "always"
-            ? `Automatic — every ${AUTO_SYNC_MS / 1000}s, quietly.`
-            : "Manual — nothing is fetched until you press Sync now."}
-        </span>
-      </div>
+      <NextSyncBar api={api} now={now} />
 
       <AnimatePresence>
         {(api.error || api.syncError) && (
@@ -318,12 +289,11 @@ export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
         )}
       </AnimatePresence>
 
-      {/* What the last device pull reported — the sync endpoint returns this
-          rather than any attendance, so it is shown as its own line. The tone is
-          never "idle": the usual result is "Added 0 new records", and a muted
-          strip for the normal case reads as nothing having happened. */}
+      {/* What the last device pull reported — but only when it found something or
+          went wrong. A sync runs every minute, and "added 0 records" sixty times
+          an hour is noise. */}
       <AnimatePresence>
-        {api.sync && !api.syncError && (
+        {api.sync && !api.syncError && (api.sync.status !== "completed" || api.sync.newRecords > 0) && (
           <motion.div
             className={`preview ${api.sync.status === "completed" ? "ok" : "warn"}`}
             initial={{ opacity: 0, height: 0 }}
@@ -373,32 +343,6 @@ export function AttendancePanel({ api, freeMinutes, onApply }: Props) {
         ))}
       </div>
 
-      {/* Collapsed to nothing until asked for. The punches themselves are in
-          Sessions & Breaks directly below, so the only thing worth room here is
-          the response, and that is for debugging rather than daily use. */}
-      <AnimatePresence initial={false}>
-        {rawOpen && api.today != null && (
-          <motion.div
-            className="tele-code"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <textarea
-              readOnly
-              value={JSON.stringify(
-                { "my-today": api.today.raw, "my-sync": api.sync?.raw ?? null },
-                null,
-                2,
-              )}
-            />
-            <button className="tele-clear" onClick={() => setRawOpen(false)} aria-label="Hide">
-              ×
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

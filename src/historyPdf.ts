@@ -284,7 +284,7 @@ function table(doc: Pdf, entries: Entry[], totals: Totals, cols: number, style: 
       if (restated) {
         row(doc, columns, x0, cellsOf({ kind: "day", day: opener.day }, totals, cols, true), style, DAY_BAND);
       }
-
+//asdfsd
       // At least one real entry per column, or a restated day row on a short
       // column would leave nothing consumed and the loop would never end.
       const quota = Math.max(1, per - (restated ? 1 : 0));

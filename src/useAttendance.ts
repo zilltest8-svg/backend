@@ -1,6 +1,6 @@
 /**
- * State for the Attendance screen: who is signed in, today's punches, and the
- * device sync. Deliberately separate from `useStore` — this data is fetched
+ * State for the live attendance panel: who is signed in, today's punches, and
+ * the device sync, which runs by itself every minute while signed in. Deliberately separate from `useStore` — this data is fetched
  * live from the HR API and is never written to localStorage.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,16 +37,20 @@ export interface AttendanceState {
   sync: SyncResult | null;
   syncing: boolean;
   syncError: string | null;
-  /** `tap` only syncs when the button is pressed; `always` polls. */
-  syncMode: SyncMode;
+  /** When the next automatic sync is due, for the countdown bar. */
+  nextSyncAt: number | null;
+  /**
+   * The sign-in dialog puts itself up once when the app finds itself signed
+   * out. Kept here rather than on the panel, which is remounted on every visit
+   * to the dashboard and would otherwise ask again each time.
+   */
+  askedLogin: boolean;
 }
 
-export type SyncMode = "tap" | "always";
-
 /**
- * How often `always` re-syncs. A device pull is real work on the HR side, so
- * this is a minute rather than the 250ms the clock ticks at — the punch data it
- * would find does not change faster than that anyway.
+ * How often the HR API is called while signed in. A device pull is real work on
+ * the HR side, so this is a minute rather than the 250ms the clock ticks at —
+ * the punch data it would find does not change faster than that anyway.
  */
 export const AUTO_SYNC_MS = 60_000;
 
@@ -55,16 +59,13 @@ export interface AttendanceApi extends AttendanceState {
   signOut: () => Promise<void>;
   setRange: (start: string, end: string) => void;
   refresh: () => void;
-  /** Pulls records off the punch devices, then reloads today's punches. */
+  /** Sync now, out of turn. Says what happened, unlike the automatic ones. */
   startSync: () => void;
-  setSyncMode: (mode: SyncMode) => void;
+  markAskedLogin: () => void;
 }
 
 /** `say` surfaces the sync result as a toast, so the outcome is never silent. */
-export function useAttendance(
-  active: boolean,
-  say?: (text: string, ok: boolean) => void,
-): AttendanceApi {
+export function useAttendance(say?: (text: string, ok: boolean) => void): AttendanceApi {
   const today = dayKey(Date.now());
   const [state, setState] = useState<AttendanceState>({
     auth: "checking",
@@ -79,8 +80,15 @@ export function useAttendance(
     sync: null,
     syncing: false,
     syncError: null,
-    syncMode: "tap",
+    nextSyncAt: null,
+    askedLogin: false,
   });
+
+  /**
+   * Until a range is picked by hand it means "today", and has to keep meaning
+   * that when the app is left open past midnight.
+   */
+  const rangePicked = useRef(false);
 
   const patch = useCallback((next: Partial<AttendanceState>) => {
     setState((prev) => ({ ...prev, ...next }));
@@ -97,16 +105,16 @@ export function useAttendance(
 
   // The proxy holds the session in an httpOnly cookie, so a reload has to ask
   // whether it is still valid rather than reading it.
-  const [checked, setChecked] = useState(false);
+  const checked = useRef(false);
   useEffect(() => {
-    if (!active || checked) return;
-    setChecked(true);
+    if (checked.current) return;
+    checked.current = true;
     checkSession()
       .then((s) => patch({ auth: s.authenticated ? "signed-in" : "signed-out", user: s.user }))
       // A proxy that is down is indistinguishable from being signed out, and
       // showing the login form is the useful answer either way.
       .catch(() => patch({ auth: "signed-out" }));
-  }, [active, checked, patch]);
+  }, [patch]);
 
   /** True when the failure means the session is gone, so the caller can stop. */
   const handleFailure = useCallback(
@@ -144,18 +152,13 @@ export function useAttendance(
     }
   }, [handleFailure, patch]);
 
-  // Entering the screen, or signing in, loads today's punches.
-  useEffect(() => {
-    if (!active || state.auth !== "signed-in") return;
-    void load();
-  }, [active, state.auth, load]);
-
   const signIn = useCallback(
     async (email: string, password: string) => {
       patch({ auth: "signing-in", authError: null });
       try {
         const { user } = await apiLogin(email, password);
-        patch({ auth: "signed-in", user, authError: null });
+        // askedLogin is cleared so an expired session, hours on, does prompt.
+        patch({ auth: "signed-in", user, authError: null, askedLogin: false });
       } catch (err) {
         patch({ auth: "signed-out", authError: (err as Error).message ?? "Sign-in failed." });
       }
@@ -175,11 +178,16 @@ export function useAttendance(
       authError: null,
       syncError: null,
       fetchedAt: null,
+      // Signing out on purpose is not a reason to be asked to sign straight back in.
+      askedLogin: true,
     });
   }, [patch]);
 
   const setRange = useCallback(
-    (start: string, end: string) => patch({ startDate: start, endDate: end }),
+    (start: string, end: string) => {
+      rangePicked.current = true;
+      patch({ startDate: start, endDate: end });
+    },
     [patch],
   );
 
@@ -191,9 +199,12 @@ export function useAttendance(
   const sync = useCallback(
     async (quiet: boolean) => {
       if (state.auth !== "signed-in" || state.syncing) return;
-      patch({ syncing: true, syncError: null });
+      const today = dayKey(Date.now());
+      const start = rangePicked.current ? state.startDate : today;
+      const end = rangePicked.current ? state.endDate : today;
+      patch({ syncing: true, syncError: null, startDate: start, endDate: end });
       try {
-        const result = await apiRunSync(state.startDate, state.endDate);
+        const result = await apiRunSync(start, end);
         patch({ sync: result });
         if (!quiet) say?.(result.message, true);
         // A pull that added rows changes what my-today would answer, so read it
@@ -201,9 +212,13 @@ export function useAttendance(
         await load();
       } catch (err) {
         const message = (err as Error).message ?? "Sync failed.";
-        if (!handleFailure(err)) patch({ syncError: message });
-        // A failure is worth saying out loud even on the automatic path.
-        say?.(message, false);
+        const signedOut = handleFailure(err);
+        if (!signedOut) patch({ syncError: message });
+        // With a sync every minute, a toast per failure would never stop; the
+        // strip on the panel carries it, and only a pressed button speaks up.
+        if (!quiet || signedOut) say?.(message, false);
+        // The device pull failing is no reason to show stale punches as well.
+        if (!signedOut) await load();
       } finally {
         // Always clears, whatever happened above. Leaving it true would disable
         // the button for good, and a disabled button looks exactly like a click
@@ -215,7 +230,7 @@ export function useAttendance(
   );
 
   const startSync = useCallback(() => void sync(false), [sync]);
-  const setSyncMode = useCallback((mode: SyncMode) => patch({ syncMode: mode }), [patch]);
+  const markAskedLogin = useCallback(() => patch({ askedLogin: true }), [patch]);
 
   // `sync` gets a new identity on nearly every render, so the polling effect
   // reads it through a ref. Depending on it directly would tear down and
@@ -225,14 +240,21 @@ export function useAttendance(
     syncRef.current = sync;
   });
 
+  // Signed in means polling: a sync straight away, then one every minute for
+  // as long as the app is open, whichever screen is showing.
   useEffect(() => {
-    if (!active || state.auth !== "signed-in" || state.syncMode !== "always") return;
-    // Sync straight away on switching to `always`, so the choice does something
-    // visible now rather than in a minute's time.
-    void syncRef.current(true);
-    const id = window.setInterval(() => void syncRef.current(true), AUTO_SYNC_MS);
+    if (state.auth !== "signed-in") {
+      patch({ nextSyncAt: null });
+      return;
+    }
+    const run = () => {
+      patch({ nextSyncAt: Date.now() + AUTO_SYNC_MS });
+      void syncRef.current(true);
+    };
+    run();
+    const id = window.setInterval(run, AUTO_SYNC_MS);
     return () => window.clearInterval(id);
-  }, [active, state.auth, state.syncMode]);
+  }, [state.auth, patch]);
 
-  return { ...state, signIn, signOut, setRange, refresh, startSync, setSyncMode };
+  return { ...state, signIn, signOut, setRange, refresh, startSync, markAskedLogin };
 }

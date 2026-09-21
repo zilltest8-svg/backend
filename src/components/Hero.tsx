@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Counter } from "./Counter";
-import { TimerThread3D } from "./TimerThread3D";
 import { TimerRing3D, type RingTone } from "./TimerRing3D";
 import { CalendarIcon, ClockIcon } from "./Icons";
 import type { DayResult } from "../types";
@@ -47,8 +46,6 @@ export function Hero({ day, target, now }: Props) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
-        <TimerThread3D tone={ringTone} live={live} />
-
         <div className="card-head">
           <span className="card-title">
             <ClockIcon width={15} height={15} />

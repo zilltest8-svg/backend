@@ -25,13 +25,13 @@ export function Logo({ size = 26, live = false }: Props) {
       viewBox="0 0 32 32"
       fill="none"
       role="img"
-      aria-label="Chronos"
+      aria-label="Zil Time"
     >
       <defs>
         <linearGradient id={arc} x1="6" y1="2" x2="26" y2="30" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#aab6f5" />
-          <stop offset="0.55" stopColor="#34d399" />
-          <stop offset="1" stopColor="#22a37a" />
+          <stop stopColor="#ffffff" />
+          <stop offset="0.55" stopColor="#bdbdbd" />
+          <stop offset="1" stopColor="#6e6e6e" />
         </linearGradient>
       </defs>
 
@@ -42,7 +42,7 @@ export function Logo({ size = 26, live = false }: Props) {
         strokeWidth="3.2"
         strokeLinecap="round"
       />
-      <circle className="logo-tip" cx="16" cy="4.5" r="2.9" fill="#aab6f5" />
+      <circle className="logo-tip" cx="16" cy="4.5" r="2.9" fill="#ffffff" />
       <path d="M16 16.5V11" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
       <path d="M16 16.5l4.1 2.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" opacity="0.75" />
     </svg>
