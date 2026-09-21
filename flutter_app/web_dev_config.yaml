@@ -1,0 +1,11 @@
+# `flutter run -d chrome` reads this. The HR API only allow-lists
+# https://hr.zilmoney.com as a CORS origin, so the browser can never call it
+# directly. Everything under /api/punch goes to the local proxy instead
+# (`npm run server` in the repo root), which makes it a same-origin request —
+# the same job the `server.proxy` block in vite.config.ts does for the React app.
+server:
+  port: 5173
+  proxy:
+    - target: "http://127.0.0.1:8787"
+      prefix: "/api/punch/"
+      replace: "/api/punch/"
