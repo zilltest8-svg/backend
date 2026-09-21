@@ -67,7 +67,28 @@ function restamp(prev: Session[], next: Session[], meta: DayMeta, at: number): D
   return out;
 }
 
+/**
+ * A day with every session punched out is signed off by itself. Punching back
+ * in changes that day's punches, which drops the stamp again in `restamp` — so
+ * lunch reads "Saved" only until the afternoon's punch-in, and the day ends up
+ * saved for good at the last punch-out. A day left open is never marked.
+ */
+function autoSubmit(sessions: Session[], meta: DayMeta, at: number): DayMeta {
+  const open = new Set(sessions.filter((s) => s.out == null).map((s) => dayKey(s.in)));
+  const out: DayMeta = {};
+  for (const [key, stamp] of Object.entries(meta)) {
+    out[key] = stamp.submittedAt == null && !open.has(key) ? { ...stamp, submittedAt: at } : stamp;
+  }
+  return out;
+}
+
 function readStore(): Store {
+  const store = readRaw();
+  // Days stored before this rule existed get the same treatment.
+  return { ...store, meta: autoSubmit(store.sessions, store.meta, Date.now()) };
+}
+
+function readRaw(): Store {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -114,7 +135,7 @@ function readStore(): Store {
 }
 
 /**
- * `canPersist` is the storage consent. Reading is unconditional — data already in
+ * `canPersist` is false only after "Stop & wipe". Reading is unconditional — data already in
  * this browser belongs to the user and dropping it would be silent data loss —
  * but nothing is written back until they say yes, and the write happens the
  * moment they do.
@@ -135,7 +156,8 @@ export function useStore(canPersist: boolean) {
     (update: Session[] | ((prev: Session[]) => Session[])) =>
       setStore((s) => {
         const sessions = typeof update === "function" ? update(s.sessions) : update;
-        return { ...s, sessions, meta: restamp(s.sessions, sessions, s.meta, Date.now()) };
+        const at = Date.now();
+        return { ...s, sessions, meta: autoSubmit(sessions, restamp(s.sessions, sessions, s.meta, at), at) };
       }),
     [],
   );

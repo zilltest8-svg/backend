@@ -13,8 +13,8 @@ interface Props {
   limit?: number;
 }
 
-const WORK = 0x34d399;
-const BREAK = 0xf5a524;
+const WORK = 0xffffff;
+const BREAK = 0x8a8a8a;
 
 /**
  * Worked and break hours per stored day, as columns you can read at a glance.
@@ -79,7 +79,7 @@ export function DayBars3D({ days, target, limit = 14 }: Props) {
 
       const goalLine = new THREE.Mesh(
         new THREE.BoxGeometry(1, 0.022, 0.022),
-        new THREE.MeshBasicMaterial({ color: 0xaab6f5, transparent: true, opacity: 0.75 }),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 }),
       );
       goalLine.position.set(0, goal * scale, -0.3);
       stage.add(goalLine);
@@ -87,7 +87,7 @@ export function DayBars3D({ days, target, limit = 14 }: Props) {
       const make = (color: number, offset: number) => {
         const mesh = new THREE.Mesh(
           new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.1, emissive: color, emissiveIntensity: 0.12 }),
+          new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.1, emissive: color, emissiveIntensity: 0.02 }),
         );
         mesh.position.z = offset;
         stage.add(mesh);
@@ -161,9 +161,9 @@ export function DayBars3D({ days, target, limit = 14 }: Props) {
       <div className="card-head" style={{ marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>Last {shown.length} stored {shown.length === 1 ? "day" : "days"}</h2>
         <span className="bars3d-key">
-          <i style={{ background: "#34d399" }} /> work
-          <i style={{ background: "#f5a524", marginLeft: 12 }} /> break
-          <i style={{ background: "#aab6f5", marginLeft: 12 }} /> {hm(target * MIN)} goal
+          <i style={{ background: "#ffffff" }} /> work
+          <i style={{ background: "#8a8a8a", marginLeft: 12 }} /> break
+          <i style={{ background: "#ffffff", opacity: 0.45, marginLeft: 12 }} /> {hm(target * MIN)} goal
         </span>
       </div>
 

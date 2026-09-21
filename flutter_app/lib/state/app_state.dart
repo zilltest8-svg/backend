@@ -24,8 +24,11 @@ const _sessionKey = 'otc.session';
 /// Every key this app owns. Rejecting clears all of them — except the choice itself.
 const _owned = [_storeKey, _v2Key, _legacyKey, urlKey, idKey, fileKey, _proxyKey, _sessionKey];
 
-/// Where a desktop build looks for the attendance proxy until told otherwise.
-const defaultProxyBase = String.fromEnvironment('PUNCH_PROXY', defaultValue: 'http://localhost:8787');
+/// The live attendance backend. A desktop build always talks to this one — there
+/// is no setting for it, so a release can never end up pointed at a developer's
+/// localhost. (A browser build uses its own origin instead; the session there is
+/// an httpOnly cookie, which only works same-origin.)
+const backendBase = 'https://backend-sigma-seven-ta21oxlec0.vercel.app';
 
 /// Past days don't change; recomputing the whole history 4× a second would be waste.
 const _historyTick = 30000;
@@ -108,14 +111,15 @@ class AppState extends ChangeNotifier {
       'denied' => Consent.denied,
       _ => Consent.unknown,
     };
-    proxyBase = _read(_proxyKey) ?? defaultProxyBase;
+    // An address saved by an earlier build would be a localhost one; drop it.
+    unawaited(_prefs.remove(_proxyKey));
     _readStore();
     // Days stored before this rule existed get the same treatment.
     meta = _autoSubmit(sessions, meta, nowMs());
 
     sheet = SheetController(read: _read, remember: _remember, day: () => day, say: say)..addListener(notifyListeners);
     attendance = AttendanceController(
-      proxyBase: () => proxyBase,
+      proxyBase: () => backendBase,
       say: (text, ok) => say(text, ok),
       onFetched: _applyFetched,
       // The proxy's sealed session, kept so a restart stays signed in. Unused
@@ -165,7 +169,6 @@ class AppState extends ChangeNotifier {
   DayMeta meta = const {};
 
   Consent consent = Consent.unknown;
-  String proxyBase = defaultProxyBase;
 
   int now = nowMs();
   AppView view = AppView.dashboard;
@@ -280,12 +283,6 @@ class AppState extends ChangeNotifier {
   void reject() {
     _decide(Consent.denied);
     say('Nothing will be stored. Anything already saved has been deleted.', true);
-  }
-
-  void setProxyBase(String value) {
-    proxyBase = value.trim().isEmpty ? defaultProxyBase : value.trim();
-    _remember(_proxyKey, proxyBase);
-    notifyListeners();
   }
 
   /* ----------------------------------------------------------------- derive */

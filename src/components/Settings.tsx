@@ -76,35 +76,33 @@ export function Settings({
 
       <div className="grid">
         <div className="card">
-          <h2 className="sub">Cookies &amp; storage</h2>
+          <h2 className="sub">Storage</h2>
           <p className="lead">
-            No cookies are set and nothing is sent anywhere. The only question is whether this
-            browser may keep your punches, settings and export connection between visits.
+            Your punches are saved in this browser automatically, including what the HR sync
+            brings in every minute. No cookies are set and nothing is sent anywhere else.
           </p>
 
-          <div className={`preview ${consent === "granted" ? "ok" : consent === "denied" ? "warn" : "idle"}`}>
-            {consent === "granted"
-              ? "Allowed — this day and every stored day survive a refresh."
-              : consent === "denied"
-                ? "Rejected — nothing is written, so closing the tab loses the day."
-                : "Not answered yet — nothing is being written until you choose."}
+          <div className={`preview ${consent === "denied" ? "warn" : "ok"}`}>
+            {consent === "denied"
+              ? "Off — nothing is written, so closing the tab loses the day."
+              : "Saving automatically — this day and every stored day survive a refresh."}
           </div>
 
           <div className="btn-row">
-            <button className="btn primary" disabled={consent === "granted"} onClick={onAllow}>
-              Allow cookies
+            <button className="btn primary" disabled={consent !== "denied"} onClick={onAllow}>
+              Save in this browser
             </button>
             <button className="btn" disabled={consent === "denied"} onClick={onReject}>
-              Reject &amp; wipe
+              Stop &amp; wipe
             </button>
           </div>
-          <p className="hint">Rejecting also deletes what is already saved in this browser.</p>
+          <p className="hint">Stopping also deletes what is already saved in this browser.</p>
         </div>
 
         <div className="card">
           <h2 className="sub">Stored data</h2>
           <p className="lead">
-            {consent === "granted"
+            {consent !== "denied"
               ? `${storedDays} ${storedDays === 1 ? "day" : "days"} kept in this browser's local storage, filed by date.`
               : `${storedDays} ${storedDays === 1 ? "day" : "days"} in memory for this session only — allow storage above to keep them.`}
           </p>

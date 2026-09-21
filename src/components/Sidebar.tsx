@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import {
@@ -6,10 +5,10 @@ import {
   GearIcon,
   GridIcon,
   HistoryIcon,
-  PlayIcon,
-  StopIcon,
   TrendIcon,
 } from "./Icons";
+import { AUTO_SYNC_MS, type AttendanceApi } from "../useAttendance";
+import { clockShort } from "../time";
 
 export type View = "dashboard" | "insights" | "history" | "export" | "settings";
 
@@ -23,12 +22,43 @@ const NAV: { id: View; label: string; icon: ReactNode }[] = [
 interface Props {
   view: View;
   onView: (view: View) => void;
-  /** True while a session is open, which turns the button into Stop. */
+  /** True while a session is open — the logo's tip pulses. */
   running: boolean;
-  onTimer: () => void;
+  api: AttendanceApi;
 }
 
-export function Sidebar({ view, onView, running, onTimer }: Props) {
+/**
+ * Where the timer button used to be: punches now come from the HR API by
+ * themselves, so what is worth a permanent place is whether that is working.
+ */
+function SyncStatus({ api }: { api: AttendanceApi }) {
+  const signedIn = api.auth === "signed-in";
+  const failed = signedIn && (api.error ?? api.syncError) != null;
+  const title = !signedIn
+    ? "Not signed in"
+    : failed
+      ? "Sync problem"
+      : api.syncing || api.loading
+        ? "Syncing…"
+        : "Live sync on";
+  const note = !signedIn
+    ? "Sign in on the dashboard"
+    : api.fetchedAt == null
+      ? `every ${AUTO_SYNC_MS / 1000}s`
+      : `updated ${clockShort(api.fetchedAt)}`;
+
+  return (
+    <div className={`sync-status${signedIn ? " on" : ""}${failed ? " failed" : ""}`}>
+      <i />
+      <span>
+        <b>{title}</b>
+        <small>{note}</small>
+      </span>
+    </div>
+  );
+}
+
+export function Sidebar({ view, onView, running, api }: Props) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -36,7 +66,7 @@ export function Sidebar({ view, onView, running, onTimer }: Props) {
           <Logo size={22} live={running} />
         </span>
         <span>
-          <b>Chronos</b>
+          <b>Zil Time</b>
           <small>Deep Work Mode</small>
         </span>
       </div>
@@ -57,16 +87,7 @@ export function Sidebar({ view, onView, running, onTimer }: Props) {
             Settings
           </button>
         </nav>
-        <motion.button
-          className={`timer-btn${running ? " stop" : ""}`}
-          whileHover={{ scale: 1.015 }}
-          whileTap={{ scale: 0.975 }}
-          onClick={onTimer}
-          title={running ? "Punch out now" : "Punch in now"}
-        >
-          {running ? <StopIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
-          {running ? "Stop Timer" : "Start Timer"}
-        </motion.button>
+        <SyncStatus api={api} />
       </div>
     </aside>
   );

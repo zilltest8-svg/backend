@@ -7,9 +7,9 @@ export type RingTone = "idle" | "working" | "break" | "done";
 
 const COLOR: Record<RingTone, number> = {
   idle: 0x6b6b76,
-  working: 0xf2f2f4,
-  break: 0xf5a524,
-  done: 0x34d399,
+  working: 0xffffff,
+  break: 0x9c9c9c,
+  done: 0xffffff,
 };
 
 interface Props {

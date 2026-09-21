@@ -28,12 +28,12 @@ npm run server                  # http://localhost:8787 — needs PUNCH_SECRET, 
 - **Web** calls `/api/punch/*` on its own origin. In development
   `web_dev_config.yaml` forwards that to `127.0.0.1:8787`, the job
   `vite.config.ts` does for the React app.
-- **Windows** calls the address under *Settings → Attendance proxy*
-  (`http://localhost:8787` by default; bake in another with
-  `--dart-define=PUNCH_PROXY=https://your-host`). A desktop app has no cookie
-  jar, so the proxy's sealed session cookie is stored with the app's data and
-  you stay signed in across restarts, until the proxy expires it
-  (`SESSION_TTL_HOURS`, 8 by default).
+- **Windows** always calls the live backend,
+  `https://backend-sigma-seven-ta21oxlec0.vercel.app` (`backendBase` in
+  `lib/state/app_state.dart`). There is no setting for it, so a release build
+  cannot end up on localhost. The proxy's sealed session cookie is stored with
+  the app's data, so you stay signed in across restarts until it expires
+  (`SESSION_TTL_HOURS` on the backend, 8 by default).
 
 Once signed in, the app syncs with the HR API every 60 seconds on its own — on
 any screen — and what comes back is saved on this device automatically. There

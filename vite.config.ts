@@ -29,10 +29,12 @@ export default defineConfig({
   plugins: [react(), viteSingleFile(), classicScript()],
   server: {
     // The HR API only allow-lists https://hr.zilmoney.com as a CORS origin, so
-    // the browser can never call it from :5173. Everything under /api/punch goes
-    // to the local proxy instead, which makes it a same-origin request.
+    // the browser can never call it from :5173. Everything under /api/punch is
+    // forwarded to the live backend instead, which makes it a same-origin request
+    // — the same target flutter_app/web_dev_config.yaml uses. To develop against
+    // a local proxy (`npm run server`), point this at "http://127.0.0.1:8787".
     proxy: {
-      "/api/punch": { target: "http://127.0.0.1:8787", changeOrigin: false },
+      "/api/punch": { target: "https://backend-sigma-seven-ta21oxlec0.vercel.app", changeOrigin: true },
     },
   },
   build: {

@@ -154,7 +154,7 @@ class AttendanceClient {
           : http.post(uri, headers: headers, body: jsonEncode(body ?? const {}));
       res = await pending.timeout(const Duration(seconds: 30));
     } catch (_) {
-      throw const AttendanceError('Could not reach the attendance proxy. Start it with `npm run server`.');
+      throw const AttendanceError('Could not reach the attendance server. Check your internet connection.');
     }
 
     if (!kIsWeb) _keepCookie(res.headers['set-cookie']);

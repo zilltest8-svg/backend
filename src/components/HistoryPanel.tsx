@@ -20,8 +20,6 @@ interface Props {
   filter: Filter;
   /** The day the calculator is showing — marked in the list. */
   selectedKey: string | null;
-  /** Free text from the top bar; narrows the list further. */
-  query: string;
   onFilter: (patch: Partial<Filter>) => void;
   onDeleteDay: (key: string) => void;
   onClearAll: () => void;
@@ -29,14 +27,6 @@ interface Props {
   onDownload: (days: DayEntry[], scope: string) => void;
   /** Opens the day sheet for that date. */
   onEdit: (key: string) => void;
-}
-
-/** Matches a day against what was typed: "18 aug", "august", "2026-08", "wed". */
-function matches(day: DayEntry, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  const hay = `${day.key} ${dateLabel(day.at)} ${weekday(day.at)} ${monthLabel(day.at)}`.toLowerCase();
-  return q.split(/\s+/).every((word) => hay.includes(word));
 }
 
 /** "Session 2" / "Break 1", numbered in the order they happened. */
@@ -142,7 +132,6 @@ export function HistoryPanel({
   days,
   filter,
   selectedKey,
-  query,
   onFilter,
   onDeleteDay,
   onClearAll,
@@ -151,7 +140,7 @@ export function HistoryPanel({
 }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const months = monthsOf(days);
-  const visible = daysInMonth(days, filter.month).filter((d) => matches(d, query));
+  const visible = daysInMonth(days, filter.month);
   const totals = totalsOf(visible);
   const scope = filter.month === "all" ? "All stored days" : monthLabelFromKey(filter.month);
 
@@ -250,9 +239,7 @@ export function HistoryPanel({
             <motion.div key="empty" className="empty-row" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {days.length === 0
                 ? "Nothing stored yet — the days you load are kept here."
-                : query.trim()
-                  ? `No stored day matches "${query.trim()}".`
-                  : "No days stored in that month."}
+                : "No days stored in that month."}
             </motion.div>
           )}
 

@@ -2,8 +2,9 @@ import { useCallback, useState } from "react";
 
 /**
  * The app sets no cookies and calls no third party — it keeps punches in this
- * browser's local storage. The consent choice governs that storage: until it is
- * granted nothing is written, and rejecting wipes whatever is already there.
+ * browser's local storage. Saving is the default, so the punches fetched every
+ * minute are kept without being asked for; only an explicit "Stop & wipe" in
+ * Settings turns it off, and that wipes whatever is already there.
  */
 export type Consent = "unknown" | "granted" | "denied";
 
@@ -48,5 +49,5 @@ export function useConsent(): ConsentState {
   const allow = useCallback(() => decide("granted"), [decide]);
   const reject = useCallback(() => decide("denied"), [decide]);
 
-  return { consent, canPersist: consent === "granted", allow, reject };
+  return { consent, canPersist: consent !== "denied", allow, reject };
 }

@@ -1,18 +1,10 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { BulbIcon, ChartIcon, CoffeeIcon, StopwatchIcon } from "./Icons";
+import { ChartIcon, CoffeeIcon, StopwatchIcon } from "./Icons";
 import { DayBars3D } from "./DayBars3D";
 import { Efficiency } from "./Efficiency";
 import type { DayEntry } from "../history";
 import type { DayResult } from "../types";
 import { MIN, clockShort, clockTime, hm, hms, human } from "../time";
-
-const TIPS = [
-  "Take regular breaks to stay productive and healthy.",
-  "Every break minute pushes your exit time back by the same amount.",
-  "Re-paste the API response any time — sessions update instead of duplicating.",
-  "Punch out before lunch so the break is counted from the right minute.",
-] as const;
 
 /** Facts worth surfacing, all derived from the day rather than guessed at. */
 function insights(day: DayResult): string[] {
@@ -63,13 +55,7 @@ interface Props {
 }
 
 export function Insights({ day, days, target }: Props) {
-  const [tip, setTip] = useState(0);
   const live = !day.stale;
-
-  useEffect(() => {
-    const id = window.setInterval(() => setTip((t) => (t + 1) % TIPS.length), 9000);
-    return () => window.clearInterval(id);
-  }, []);
 
   const worked = days.reduce((a, d) => a + d.result.worked, 0);
   const breaks = days.reduce((a, d) => a + d.result.breakMs, 0);
@@ -82,14 +68,6 @@ export function Insights({ day, days, target }: Props) {
 
   return (
     <div className="grid">
-      <div className="tip">
-        <span className="tag">Tip</span>
-        <span style={{ display: "flex", color: "var(--amber)" }}>
-          <BulbIcon width={15} height={15} />
-        </span>
-        {TIPS[tip]}
-      </div>
-
       <DayBars3D days={days} target={target} />
 
       <div className="cols">

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../core/export.dart';
@@ -892,10 +891,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _target = TextEditingController();
   final _free = TextEditingController();
-  final _proxy = TextEditingController();
   final _targetFocus = FocusNode();
   final _freeFocus = FocusNode();
-  final _proxyFocus = FocusNode();
 
   @override
   void initState() {
@@ -903,7 +900,6 @@ class _SettingsPageState extends State<SettingsPage> {
     // Committed on blur, as the number inputs were.
     _targetFocus.addListener(() => _onBlur(_targetFocus, _commitTarget));
     _freeFocus.addListener(() => _onBlur(_freeFocus, _commitFree));
-    _proxyFocus.addListener(() => _onBlur(_proxyFocus, () => AppScope.read(context).setProxyBase(_proxy.text)));
   }
 
   void _onBlur(FocusNode node, VoidCallback commit) {
@@ -927,10 +923,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    for (final c in [_target, _free, _proxy]) {
+    for (final c in [_target, _free]) {
       c.dispose();
     }
-    for (final f in [_targetFocus, _freeFocus, _proxyFocus]) {
+    for (final f in [_targetFocus, _freeFocus]) {
       f.dispose();
     }
     super.dispose();
@@ -951,7 +947,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final dayWord = stored == 1 ? 'day' : 'days';
     _mirror(_target, _targetFocus, '${settings.target}');
     _mirror(_free, _freeFocus, '${settings.free}');
-    _mirror(_proxy, _proxyFocus, app.proxyBase);
 
     Widget number(String label, TextEditingController c, FocusNode f, VoidCallback commit, String hint) => Expanded(
       child: Column(
@@ -1009,35 +1004,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-          // A browser reaches the proxy on its own origin; only a desktop build
-          // has to be told where it is.
-          if (!kIsWeb)
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const H2('Attendance proxy'),
-                  const SizedBox(height: 4),
-                  const Lead(
-                    'Live attendance goes through the proxy in server/ — start it with `npm run server`, '
-                    'or point this at wherever it is deployed.',
-                  ),
-                  const SizedBox(height: 16),
-                  const FieldLabel('Proxy address'),
-                  TextField(
-                    controller: _proxy,
-                    focusNode: _proxyFocus,
-                    autocorrect: false,
-                    style: m(13),
-                    decoration: inputDecoration(hint: defaultProxyBase),
-                    onSubmitted: app.setProxyBase,
-                  ),
-                  const Hint(
-                    'You stay signed in between restarts until the proxy expires the session (8 hours by default). Changing this address needs a new sign-in.',
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
       side: Gap(
