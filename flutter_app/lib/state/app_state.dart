@@ -28,7 +28,7 @@ const _owned = [_storeKey, _v2Key, _legacyKey, urlKey, idKey, fileKey, _proxyKey
 /// is no setting for it, so a release can never end up pointed at a developer's
 /// localhost. (A browser build uses its own origin instead; the session there is
 /// an httpOnly cookie, which only works same-origin.)
-const backendBase = 'https://backend-sigma-seven-ta21oxlec0.vercel.app';
+const backendBase = 'https://whenhome.vercel.app';
 
 /// Past days don't change; recomputing the whole history 4× a second would be waste.
 const _historyTick = 30000;

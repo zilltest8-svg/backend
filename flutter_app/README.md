@@ -29,7 +29,7 @@ npm run server                  # http://localhost:8787 — needs PUNCH_SECRET, 
   `web_dev_config.yaml` forwards that to `127.0.0.1:8787`, the job
   `vite.config.ts` does for the React app.
 - **Windows** always calls the live backend,
-  `https://backend-sigma-seven-ta21oxlec0.vercel.app` (`backendBase` in
+  `https://whenhome.vercel.app` (`backendBase` in
   `lib/state/app_state.dart`). There is no setting for it, so a release build
   cannot end up on localhost. The proxy's sealed session cookie is stored with
   the app's data, so you stay signed in across restarts until it expires

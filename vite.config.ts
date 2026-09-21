@@ -34,7 +34,7 @@ export default defineConfig({
     // — the same target flutter_app/web_dev_config.yaml uses. To develop against
     // a local proxy (`npm run server`), point this at "http://127.0.0.1:8787".
     proxy: {
-      "/api/punch": { target: "https://backend-sigma-seven-ta21oxlec0.vercel.app", changeOrigin: true },
+      "/api/punch": { target: "https://whenhome.vercel.app", changeOrigin: true },
     },
   },
   build: {

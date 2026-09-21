@@ -9,6 +9,6 @@
 server:
   port: 5173
   proxy:
-    - target: "https://backend-sigma-seven-ta21oxlec0.vercel.app"
+    - target: "https://whenhome.vercel.app"
       prefix: "/api/punch/"
       replace: "/api/punch/"
