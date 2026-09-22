@@ -9,7 +9,6 @@ import { Insights } from "./components/Insights";
 import { SessionModal } from "./components/SessionModal";
 import { SessionTable } from "./components/SessionTable";
 import { Settings } from "./components/Settings";
-import { SheetPanel } from "./components/SheetPanel";
 import { SheetSetup } from "./components/SheetSetup";
 import { Sidebar, type View } from "./components/Sidebar";
 import { StatsStrip } from "./components/StatsStrip";
@@ -23,6 +22,7 @@ import { historyPdf, historyPdfFilename } from "./historyPdf";
 import { MIN, dateLabel, dayKey, minutesFromInput, startOfDayKey, startOfToday } from "./time";
 import type { Session } from "./types";
 import { useAttendance } from "./useAttendance";
+import { useCloud } from "./useCloud";
 import { useConsent } from "./useConsent";
 import { useSheet } from "./useSheet";
 import { useNow, useStore } from "./useStore";
@@ -32,7 +32,8 @@ const HISTORY_TICK = 30_000;
 
 export default function App() {
   const { consent, canPersist, allow, reject } = useConsent();
-  const { store, setSessions, setSettings, setFilter, commitDay } = useStore(canPersist);
+  const { store, setSessions, setSettings, setFilter, commitDay, replaceSettings, applyRemote } =
+    useStore(canPersist);
   const now = useNow();
   const [view, setView] = useState<View>("dashboard");
   const [modal, setModal] = useState(false);
@@ -118,6 +119,9 @@ export default function App() {
 
   const sheet = useSheet(day, say, canPersist);
   const attendance = useAttendance(say);
+  // History, settings and the sheet connection live in Firestore too, under
+  // the signed-in HR account (or this browser until someone signs in).
+  useCloud({ store, applyRemote, replaceSettings, sheet, email: attendance.user?.email, canPersist, say });
 
   /**
    * Every fetch flows into the store by itself, so the whole dashboard reads
@@ -250,19 +254,6 @@ export default function App() {
               onClearAll={handleClearAll}
               onDownload={handleDownloadPdf}
               onEdit={(key) => setSheetKey(key || dayKey(Date.now()))}
-            />
-          </div>
-        )}
-
-        {view === "export" && (
-          <div className="narrow">
-            <SheetPanel
-              sheet={sheet}
-              days={days}
-              filter={store.filter}
-              selected={selected}
-              onFilter={setFilter}
-              onAdd={() => setModal(true)}
             />
           </div>
         )}

@@ -65,6 +65,8 @@ export interface Sheet {
   testConnection: () => Promise<boolean>;
   /** Forget the saved deployment so a new one can be connected. */
   disconnect: () => void;
+  /** Take the connection as another device saved it. Returns whether anything changed. */
+  restore: (remote: { url: string; sheetId: string; file: string }) => boolean;
   copyRows: () => Promise<void>;
   downloadCsv: () => void;
   /** The connect dialog is shared by every button that needs a connection. */
@@ -370,12 +372,38 @@ export function useSheet(
     say("Disconnected. Connect a deployment to save again.", true);
   }, [say]);
 
+  /** The connection as another device saved it, applied only if it differs. */
+  const restore = useCallback(
+    (remote: { url: string; sheetId: string; file: string }): boolean => {
+      let saved: SavedFile | null = null;
+      if (remote.file) {
+        try {
+          saved = JSON.parse(remote.file) as SavedFile;
+        } catch {
+          saved = null;
+        }
+      }
+      const id = remote.sheetId || DEFAULT_SHEET_ID;
+      const same = remote.url === url && id === sheetId && JSON.stringify(saved) === JSON.stringify(lastSaved);
+      if (same) return false;
+      setUrlState(remote.url);
+      setSheetIdState(id);
+      setLastSaved(saved);
+      remember(URL_KEY, remote.url);
+      remember(ID_KEY, id);
+      remember(FILE_KEY, saved ? JSON.stringify(saved) : "");
+      return true;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [url, sheetId, lastSaved],
+  );
+
   const openSetup = useCallback(() => setSetupOpen(true), []);
   const closeSetup = useCallback(() => setSetupOpen(false), []);
 
   return {
     url, setUrl, sheetId, setSheetId, configured, empty, rowCount, sending,
-    send, saveToDrive, lastSaved, testConnection, disconnect,
+    send, saveToDrive, lastSaved, testConnection, disconnect, restore,
     copyRows, downloadCsv, setupOpen, openSetup, closeSetup,
   };
 }

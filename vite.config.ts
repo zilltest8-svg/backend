@@ -38,7 +38,7 @@ export default defineConfig({
     },
   },
   build: {
-    target: "es2019",
+    target: "es2020", // BigInt literals: the Firebase SDK needs them
     cssCodeSplit: false,
     assetsInlineLimit: 100_000_000,
     chunkSizeWarningLimit: 4000,

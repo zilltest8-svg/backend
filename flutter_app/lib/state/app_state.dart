@@ -12,6 +12,7 @@ import '../core/types.dart';
 import '../platform/platform.dart';
 import 'attendance.dart';
 import 'attendance_api.dart';
+import 'cloud_history.dart';
 import 'sheet.dart';
 
 const _storeKey = 'otc.v3';
@@ -20,6 +21,11 @@ const _legacyKey = 'otc.v1';
 const _consentKey = 'otc.consent';
 const _proxyKey = 'otc.proxyBase';
 const _sessionKey = 'otc.session';
+
+/// A stable id for this install, so history has a home in the cloud before
+/// anyone has signed in. Not wiped by "Reject", so a later "Allow" finds the
+/// same (now empty) home rather than orphaning it.
+const _deviceKey = 'otc.device';
 
 /// Every key this app owns. Rejecting clears all of them — except the choice itself.
 const _owned = [_storeKey, _v2Key, _legacyKey, urlKey, idKey, fileKey, _proxyKey, _sessionKey];
@@ -33,7 +39,7 @@ const backendBase = 'https://whenhome.vercel.app';
 /// Past days don't change; recomputing the whole history 4× a second would be waste.
 const _historyTick = 30000;
 
-enum AppView { dashboard, insights, history, export, settings }
+enum AppView { dashboard, insights, history, settings }
 
 /// The app keeps punches in local storage. The consent choice governs that
 /// storage: until it is granted nothing is written, and rejecting wipes whatever
@@ -104,7 +110,7 @@ DayMeta _autoSubmit(List<Session> sessions, DayMeta meta, int at) {
 List<Session> _sessionsOf(Object? raw) => raw is List ? [for (final s in raw) ?Session.fromJson(s)] : const [];
 
 class AppState extends ChangeNotifier {
-  AppState(this._prefs) {
+  AppState(this._prefs, {CloudHistory? cloud}) : _cloud = cloud {
     final choice = _read(_consentKey);
     consent = switch (choice) {
       'granted' => Consent.granted,
@@ -129,6 +135,9 @@ class AppState extends ChangeNotifier {
     )..addListener(notifyListeners);
 
     _recompute(force: true);
+    // Signing in or out moves history to a different owner in the cloud.
+    attendance.addListener(_syncOwner);
+    _syncOwner();
     unawaited(attendance.start());
     _scheduleTick();
   }
@@ -161,6 +170,14 @@ class AppState extends ChangeNotifier {
   late final AttendanceController attendance;
   late Timer _clock;
   Timer? _toastTimer;
+
+  /// History in Firestore, mirrored from `sessions` + `meta`. Null when the
+  /// app runs without Firebase, as the tests do; then storage is local only.
+  final CloudHistory? _cloud;
+
+  /// The days the last cloud snapshot contained — what "deleted elsewhere" is measured against.
+  Set<String> _cloudSeen = const {};
+  bool _cloudWarned = false;
 
   /// Every punch ever loaded, across every day — history lives here.
   List<Session> sessions = const [];
@@ -202,7 +219,10 @@ class AppState extends ChangeNotifier {
   String? _read(String key) => _prefs.getString(key) ?? legacyRead(key);
 
   void _remember(String key, String value) {
-    if (canPersist) unawaited(_prefs.setString(key, value));
+    if (!canPersist) return;
+    unawaited(_prefs.setString(key, value));
+    // The sheet connection is part of the profile, so it travels too.
+    if (key == urlKey || key == idKey || key == fileKey) _pushCloud();
   }
 
   void _readStore() {
@@ -257,6 +277,7 @@ class AppState extends ChangeNotifier {
         jsonEncode({'sessions': sessions, 'settings': settings, 'filter': filter, 'meta': meta}),
       ),
     );
+    _pushCloud();
   }
 
   void _decide(Consent next) {
@@ -265,6 +286,8 @@ class AppState extends ChangeNotifier {
         unawaited(_prefs.remove(key));
         legacyRemove(key);
       }
+      // Rejecting wipes the cloud copy too — it is the same data, just elsewhere.
+      unawaited(_cloud?.clear().catchError(_cloudFailed));
     }
     // The choice itself is the one thing kept either way, so the question is
     // asked once rather than on every launch.
@@ -283,6 +306,127 @@ class AppState extends ChangeNotifier {
   void reject() {
     _decide(Consent.denied);
     say('Nothing will be stored. Anything already saved has been deleted.', true);
+  }
+
+  /* ------------------------------------------------------------------ cloud */
+
+  /// Who the history belongs to in the cloud: the signed-in HR account, or
+  /// this install until someone signs in.
+  String get _owner {
+    final email = attendance.user?.email;
+    if (email != null && email.trim().isNotEmpty) return CloudHistory.ownerId(email);
+    var device = _prefs.getString(_deviceKey);
+    if (device == null) {
+      device = 'device-${nowMs().toRadixString(36)}';
+      unawaited(_prefs.setString(_deviceKey, device));
+    }
+    return device;
+  }
+
+  /// (Re)attach to whoever owns the history now. Cheap when nothing changed.
+  void _syncOwner() {
+    final cloud = _cloud;
+    if (cloud == null) return;
+    final owner = _owner;
+    if (owner == cloud.owner) return;
+    _cloudSeen = const {};
+    cloud.attach(owner, _applyCloud, _cloudFailed, onProfile: _applyProfile);
+  }
+
+  /// Settings and the sheet connection, as the profile document holds them.
+  Map<String, dynamic> _profileData() => {
+    'settings': settings.toJson(),
+    'sheet': {'url': sheet.url, 'id': sheet.sheetId, 'file': _read(fileKey) ?? ''},
+  };
+
+  /// The cloud's profile wins whenever it exists and differs; an owner with no
+  /// profile yet gets this device's.
+  void _applyProfile(CloudProfile profile) {
+    if (!profile.exists) return _pushCloud();
+    var changed = false;
+
+    final remoteSettings = profile.data['settings'];
+    if (remoteSettings is Map) {
+      final next = Settings.fromJson(remoteSettings);
+      if (next.target != settings.target || next.free != settings.free) {
+        settings = next;
+        changed = true;
+      }
+    }
+
+    final remoteSheet = profile.data['sheet'];
+    if (remoteSheet is Map) {
+      final restored = sheet.restore(
+        url: '${remoteSheet['url'] ?? ''}',
+        sheetId: '${remoteSheet['id'] ?? ''}',
+        file: '${remoteSheet['file'] ?? ''}',
+      );
+      changed = changed || restored;
+    }
+
+    if (changed) {
+      _recompute(force: true);
+      _persist();
+      notifyListeners();
+    } else {
+      _pushCloud();
+    }
+  }
+
+  /// Fold a cloud snapshot into what is held here. A day that differs on both
+  /// sides goes to whichever was saved later; a day the cloud has never held is
+  /// pushed up; a day the cloud held and has since dropped was deleted elsewhere.
+  void _applyCloud(CloudSnapshot snap) {
+    final local = cloudDaysOf(sessions, meta);
+    final next = <String, CloudDay>{};
+    var changed = false;
+
+    for (final remote in snap.days.values) {
+      final mine = local[remote.key];
+      if (mine == null) {
+        next[remote.key] = remote;
+        changed = true;
+      } else if (mine.signature == remote.signature || mine.stamp.savedAt > remote.stamp.savedAt) {
+        next[remote.key] = mine;
+      } else {
+        next[remote.key] = remote;
+        changed = true;
+      }
+    }
+    for (final mine in local.values) {
+      if (next.containsKey(mine.key)) continue;
+      if (!snap.first && _cloudSeen.contains(mine.key)) {
+        changed = true; // gone from the cloud since we last saw it
+      } else {
+        next[mine.key] = mine; // never reached the cloud — push it
+      }
+    }
+    _cloudSeen = snap.days.keys.toSet();
+
+    if (changed) {
+      sessions = [for (final d in next.values) ...d.sessions]..sort((a, b) => a.inAt.compareTo(b.inAt));
+      meta = {for (final d in next.values) d.key: d.stamp};
+      if (filter.day != 'latest' && !next.containsKey(filter.day)) filter = filter.copyWith(day: 'latest');
+      _recompute(force: true);
+      _persist();
+      notifyListeners();
+    } else {
+      _pushCloud();
+    }
+  }
+
+  void _pushCloud() {
+    final cloud = _cloud;
+    if (cloud == null || !canPersist) return;
+    unawaited(cloud.push(cloudDaysOf(sessions, meta)).catchError(_cloudFailed));
+    unawaited(cloud.pushProfile(_profileData()).catchError(_cloudFailed));
+  }
+
+  /// Said once — a toast on every retry would drown the screen.
+  void _cloudFailed(Object error) {
+    if (_cloudWarned) return;
+    _cloudWarned = true;
+    say('Cloud sync failed: $error', false);
   }
 
   /* ----------------------------------------------------------------- derive */
@@ -477,7 +621,9 @@ class AppState extends ChangeNotifier {
     _clock.cancel();
     clock.dispose();
     _toastTimer?.cancel();
+    _cloud?.dispose();
     sheet.dispose();
+    attendance.removeListener(_syncOwner);
     attendance.dispose();
     super.dispose();
   }

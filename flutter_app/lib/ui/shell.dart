@@ -15,7 +15,6 @@ const _nav = [
   (AppView.dashboard, 'Dashboard', Icons.grid_view_outlined),
   (AppView.insights, 'Insights', Icons.trending_up),
   (AppView.history, 'History', Icons.history),
-  (AppView.export, 'Export', Icons.add_to_drive),
 ];
 
 class Shell extends StatefulWidget {
@@ -51,7 +50,6 @@ class _ShellState extends State<Shell> {
       AppView.dashboard => const DashboardPage(),
       AppView.insights => const InsightsPage(),
       AppView.history => const _Narrow(child: HistoryPage()),
-      AppView.export => const _Narrow(child: ExportPage()),
       AppView.settings => const SettingsPage(),
     };
 

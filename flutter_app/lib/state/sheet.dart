@@ -129,6 +129,29 @@ class SheetController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Take the connection as another device saved it. Returns whether anything
+  /// changed, so the caller knows whether to write it down.
+  bool restore({required String url, required String sheetId, required String file}) {
+    SavedFile? saved;
+    if (file.isNotEmpty) {
+      try {
+        saved = SavedFile.fromJson(jsonDecode(file));
+      } on FormatException {
+        saved = null;
+      }
+    }
+    final same = url == this.url && sheetId == this.sheetId && jsonEncode(saved) == jsonEncode(lastSaved);
+    if (same) return false;
+    this.url = url;
+    this.sheetId = sheetId.isEmpty ? defaultSheetId : sheetId;
+    lastSaved = saved;
+    remember(urlKey, url);
+    remember(idKey, this.sheetId);
+    remember(fileKey, saved == null ? '' : jsonEncode(saved));
+    notifyListeners();
+    return true;
+  }
+
   void closeSetup() {
     setupOpen = false;
     notifyListeners();

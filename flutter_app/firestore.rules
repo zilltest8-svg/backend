@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// Everything lives under users/{owner}: the profile document (settings and the
+// sheet connection) and one day document per stored day. The app has no
+// Firebase sign-in yet (the HR login is a separate backend), so the owner path
+// is the only thing scoping access. Tighten to `request.auth != null` once
+// Firebase Auth is wired in.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{owner} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.data.settings is map
+        && request.resource.data.settings.target is int
+        && request.resource.data.settings.free is int;
+
+      match /days/{day} {
+        allow read, delete: if true;
+        allow create, update: if request.resource.data.sessions is list
+          && request.resource.data.savedAt is int;
+      }
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

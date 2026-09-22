@@ -1,0 +1,21 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ziltime-7992c",
+          "configurations": {
+            "android": "1:611155495755:android:cfcf26574f73eaa9c6b6ce",
+            "ios": "1:611155495755:ios:cad50a983aa50b67c6b6ce",
+            "macos": "1:611155495755:ios:cad50a983aa50b67c6b6ce",
+            "web": "1:611155495755:web:51b052dc5b30801ac6b6ce",
+            "windows": "1:611155495755:web:2aa5841e8f6b3d7fc6b6ce"
+          }
+        }
+      }
+    }
+  }
+}

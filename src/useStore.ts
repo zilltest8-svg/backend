@@ -172,6 +172,24 @@ export function useStore(canPersist: boolean) {
     [],
   );
 
+  /** Settings as another device saved them — whole, not a patch. */
+  const replaceSettings = useCallback((settings: Settings) => setStore((s) => ({ ...s, settings })), []);
+
+  /**
+   * Take days as the cloud holds them: sessions and their stamps together, so
+   * a day's "Saved" mark travels with its punches rather than being re-derived
+   * here as if the punches had just changed.
+   */
+  const applyRemote = useCallback((sessions: Session[], meta: DayMeta) => {
+    setStore((s) => {
+      const filter =
+        s.filter.day !== "latest" && !sessions.some((x) => dayKey(x.in) === s.filter.day)
+          ? { ...s.filter, day: "latest" }
+          : s.filter;
+      return { ...s, sessions, meta, filter };
+    });
+  }, []);
+
   /**
    * Replace one day's punches and sign that day off, in a single update. It has
    * to be one: `restamp` drops the meta of a day whose punches changed, so
@@ -190,7 +208,7 @@ export function useStore(canPersist: boolean) {
     });
   }, []);
 
-  return { store, setSessions, setSettings, setFilter, commitDay };
+  return { store, setSessions, setSettings, setFilter, commitDay, replaceSettings, applyRemote };
 }
 
 /**

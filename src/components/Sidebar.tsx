@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 import {
-  DriveIcon,
   GearIcon,
   GridIcon,
   HistoryIcon,
@@ -10,13 +9,12 @@ import {
 import { AUTO_SYNC_MS, type AttendanceApi } from "../useAttendance";
 import { clockShort } from "../time";
 
-export type View = "dashboard" | "insights" | "history" | "export" | "settings";
+export type View = "dashboard" | "insights" | "history" | "settings";
 
 const NAV: { id: View; label: string; icon: ReactNode }[] = [
   { id: "dashboard", label: "Dashboard", icon: <GridIcon width={17} height={17} /> },
   { id: "insights", label: "Insights", icon: <TrendIcon width={17} height={17} /> },
   { id: "history", label: "History", icon: <HistoryIcon width={17} height={17} /> },
-  { id: "export", label: "Export", icon: <DriveIcon width={17} height={17} /> },
 ];
 
 interface Props {
