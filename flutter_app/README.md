@@ -57,10 +57,10 @@ as the static output next to the existing `api/punch` function.
 
 | Path | What is in it | Ported from |
 | --- | --- | --- |
-| `lib/core/` | Pure Dart, no Flutter: IST time formatting, `computeDay`, payload parsing, history, CSV rows, the PDF writer, the Apps Script template | `time.ts`, `compute.ts`, `history.ts`, `export.ts`, `pdf.ts`, `historyPdf.ts`, `appsScript.ts`, `verdict.ts` |
+| `lib/core/` | Pure Dart, no Flutter: IST time formatting, `computeDay`, payload parsing, history, the health break rule, CSV rows, the PDF writer, the Apps Script template | `time.ts`, `compute.ts`, `history.ts`, `healthRule.ts`, `export.ts`, `pdf.ts`, `historyPdf.ts`, `appsScript.ts`, `verdict.ts` |
 | `lib/state/` | `AppState` (store, consent, filter, toast, clock), the HR attendance client and controller, the Drive connection | `useStore.ts`, `useConsent.ts`, `useAttendance.ts`, `api/attendance.ts`, `useSheet.ts`, `App.tsx` |
-| `lib/platform/` | The only web/desktop split: saving a file, reading an Apps Script reply (JSONP in a browser, a plain GET on desktop), reading the React app's old `localStorage` | `saveBlob`, `jsonp` |
-| `lib/ui/` | Theme, shared widgets, the shell, the four screens, the dialogs, and the animated visuals | `components/`, `styles.css` |
+| `lib/platform/` | The only web/desktop split: saving a file, reading an Apps Script reply (JSONP in a browser, a plain GET on desktop), reading the React app's old `localStorage`, browser notifications for the health reminders | `saveBlob`, `jsonp`, `useHealthAlerts.ts` |
+| `lib/ui/` | Theme, shared widgets, the shell, the four screens, the health banner, the dialogs, and the animated visuals | `components/`, `styles.css` |
 
 ## What changed in the port
 

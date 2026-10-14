@@ -95,3 +95,35 @@ void legacyRemove(String key) {
     // storage blocked — nothing was there to remove
   }
 }
+
+bool get _hasNotifications => globalContext.has('Notification');
+
+/// `granted`, `denied`, `default`, or `unsupported` where the browser has no Notification API.
+String notifyPermission() {
+  try {
+    return _hasNotifications ? web.Notification.permission : 'unsupported';
+  } catch (_) {
+    return 'unsupported';
+  }
+}
+
+Future<String> requestNotifyPermission() async {
+  try {
+    if (!_hasNotifications) return 'unsupported';
+    return (await web.Notification.requestPermission().toDart).toDart;
+  } catch (_) {
+    return notifyPermission();
+  }
+}
+
+/// A browser notification for a health reminder, so it is seen with the tab in
+/// the background. False when permission has not been granted.
+bool notify(String title, String body, {String? tag}) {
+  try {
+    if (notifyPermission() != 'granted') return false;
+    web.Notification(title, web.NotificationOptions(body: body, tag: tag ?? ''));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}

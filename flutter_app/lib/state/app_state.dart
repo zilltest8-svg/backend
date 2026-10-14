@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show SystemSound, SystemSoundType;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/compute.dart';
+import '../core/health_rule.dart';
 import '../core/history.dart';
 import '../core/history_pdf.dart';
 import '../core/time.dart';
@@ -27,8 +30,11 @@ const _sessionKey = 'otc.session';
 /// same (now empty) home rather than orphaning it.
 const _deviceKey = 'otc.device';
 
+/// Health reminders already announced, so a restart does not sound them again.
+const _healthFiredKey = 'otc.health.fired';
+
 /// Every key this app owns. Rejecting clears all of them — except the choice itself.
-const _owned = [_storeKey, _v2Key, _legacyKey, urlKey, idKey, fileKey, _proxyKey, _sessionKey];
+const _owned = [_storeKey, _v2Key, _legacyKey, urlKey, idKey, fileKey, _proxyKey, _sessionKey, _healthFiredKey];
 
 /// The live attendance backend. A desktop build always talks to this one — there
 /// is no setting for it, so a release can never end up pointed at a developer's
@@ -163,7 +169,8 @@ class AppState extends ChangeNotifier {
   }
 
   /// Everything about the day that the non-ticking parts of the UI depend on.
-  String get _shape => '${selected?.key}|${day.status}|${day.reached}|${day.stale}|${days.length}|$_coarse';
+  String get _shape =>
+      '${selected?.key}|${day.status}|${day.reached}|${day.stale}|${days.length}|$_coarse|${health.shape}|${healthBanner != null}';
 
   final SharedPreferences _prefs;
   late final SheetController sheet;
@@ -198,6 +205,18 @@ class AppState extends ChangeNotifier {
   /// night between them as a break. The filter decides which one that is.
   DayEntry? selected;
   late DayResult day;
+
+  /// The HR health break rule, read off `day`: it never changes a punch, it
+  /// says why the system is about to act — or just did.
+  late Health health;
+
+  /// The reminder across the top, until it is dismissed or the stage moves on.
+  HealthAlert? healthBanner;
+  String? _healthDismissed;
+  late final Set<String> _healthFired = _readFired();
+
+  /// `granted`, `denied`, `default` or `unsupported` — the browser's notification permission.
+  String notifyState = notifyPermission();
 
   int _coarse = -1;
 
@@ -347,8 +366,9 @@ class AppState extends ChangeNotifier {
 
     final remoteSettings = profile.data['settings'];
     if (remoteSettings is Map) {
-      final next = Settings.fromJson(remoteSettings);
-      if (next.target != settings.target || next.free != settings.free) {
+      // A profile written before the health rule existed has no `health`; keep this device's.
+      final next = Settings.fromJson({...remoteSettings, if (remoteSettings['health'] is! bool) 'health': settings.health});
+      if (next.target != settings.target || next.free != settings.free || next.health != settings.health) {
         settings = next;
         changed = true;
       }
@@ -439,6 +459,55 @@ class AppState extends ChangeNotifier {
     }
     selected = resolveDay(days, filter);
     day = computeDay(selected?.sessions ?? const [], settings, now);
+    health = assessHealth(day, settings);
+    _announceHealth();
+  }
+
+  /* ----------------------------------------------------------------- health */
+
+  Set<String> _readFired() {
+    try {
+      final raw = _prefs.getString(_healthFiredKey);
+      final list = raw == null ? null : jsonDecode(raw);
+      return list is List ? {for (final k in list) '$k'} : <String>{};
+    } on FormatException {
+      return <String>{};
+    }
+  }
+
+  /// Each stage of a stretch is announced once — banner, notification and a
+  /// tone — and the banner stays until dismissed or the next stage arrives.
+  /// Nothing fires for a stored day, or while the rule is switched off.
+  void _announceHealth() {
+    final alert = settings.health && !day.stale ? health.alert : null;
+    if (alert == null) {
+      healthBanner = null;
+      return;
+    }
+    // An auto punch-out has no open stretch, so the key falls back to the day.
+    final key = '${selected?.key}:${health.streakStart ?? 'out'}:${alert.stage}';
+    healthBanner = key == _healthDismissed ? null : alert;
+    if (_healthFired.contains(key)) return;
+    _healthFired.add(key);
+    if (canPersist) {
+      final kept = _healthFired.toList();
+      unawaited(_prefs.setString(_healthFiredKey, jsonEncode(kept.sublist(math.max(0, kept.length - 60)))));
+    }
+    unawaited(SystemSound.play(SystemSoundType.alert));
+    notify(alert.title, '${alert.message}\n\n${alert.why}', tag: key);
+  }
+
+  void dismissHealth() {
+    final alert = healthBanner;
+    if (alert == null) return;
+    _healthDismissed = '${selected?.key}:${health.streakStart ?? 'out'}:${alert.stage}';
+    healthBanner = null;
+    notifyListeners();
+  }
+
+  Future<void> requestNotifications() async {
+    notifyState = await requestNotifyPermission();
+    notifyListeners();
   }
 
   void _changed() {
@@ -453,8 +522,8 @@ class AppState extends ChangeNotifier {
     sessions = next;
   }
 
-  void setSettings({int? target, int? free}) {
-    settings = settings.copyWith(target: target, free: free);
+  void setSettings({int? target, int? free, bool? health}) {
+    settings = settings.copyWith(target: target, free: free, health: health);
     _changed();
   }
 

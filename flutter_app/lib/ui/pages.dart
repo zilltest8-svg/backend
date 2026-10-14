@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/history.dart';
@@ -807,6 +809,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+          _HealthSettings(app: app),
         ],
       ),
       side: Gap(
@@ -873,6 +876,76 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ------------------------------------------------------------------- health */
+
+String _notifyText(String state) => switch (state) {
+  'granted' => 'Notifications on — reminders reach you even when this tab is in the background.',
+  'denied' => "Notifications are blocked for this site. Allow them in the browser's site settings to get them.",
+  'default' => 'Reminders show as a banner here. Allow notifications to get them when the tab is in the background.',
+  _ => 'Reminders show as a banner here, with the system alert sound.',
+};
+
+/// The health break rule: on or off, what it does, and the browser permission
+/// for its notifications.
+class _HealthSettings extends StatelessWidget {
+  const _HealthSettings({required this.app});
+
+  final AppState app;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = app.settings.health;
+    final web = app.notifyState != 'unsupported';
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const H2('Health break rule', leading: Icon(Icons.favorite_border, size: 15, color: C.dim)),
+          const SizedBox(height: 4),
+          const Lead('Reminders at 2h, 3h and 4h of continuous work, and the auto punch-out at 4h 15m.'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Btn(
+                  'On',
+                  kind: on ? BtnKind.primary : BtnKind.normal,
+                  onPressed: on ? null : () => app.setSettings(health: true),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Btn(
+                  'Off',
+                  kind: on ? BtnKind.normal : BtnKind.primary,
+                  onPressed: on ? () => app.setSettings(health: false) : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Preview.text(
+            on
+                ? 'On — each reminder arrives as an alert${web ? ', a notification' : ''} and a tone, with the reason it fired.'
+                : 'Off — no reminders are shown.',
+            tone: on ? Tone.ok : Tone.idle,
+          ),
+          if (web) ...[
+            const SizedBox(height: 12),
+            Btn(
+              app.notifyState == 'granted' ? 'Browser notifications allowed' : 'Allow browser notifications',
+              icon: Icons.notifications_none,
+              wide: true,
+              onPressed: on && app.notifyState == 'default' ? () => unawaited(app.requestNotifications()) : null,
+            ),
+          ],
+          Hint(_notifyText(app.notifyState)),
         ],
       ),
     );

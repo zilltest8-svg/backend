@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { BellIcon, HeartIcon } from "./Icons";
 import type { Settings as SettingsValues } from "../types";
 import type { Consent } from "../useConsent";
+import type { HealthNotify } from "../useHealthAlerts";
 import { hm, MIN } from "../time";
 
 interface Props {
@@ -11,7 +13,16 @@ interface Props {
   consent: Consent;
   onAllow: () => void;
   onReject: () => void;
+  /** Browser notification permission for the health reminders. */
+  notify: HealthNotify;
 }
+
+const NOTIFY_TEXT: Record<HealthNotify["state"], string> = {
+  granted: "Notifications on — reminders reach you even when this tab is in the background.",
+  denied: "Notifications are blocked for this site. Allow them in the browser's site settings to get them.",
+  default: "Reminders show as a banner here. Allow notifications to get them when the tab is in the background.",
+  unsupported: "This browser cannot show notifications; reminders show as a banner here.",
+};
 
 /** Minutes in, minutes out — the two numbers the whole calculation rests on. */
 export function Settings({
@@ -22,6 +33,7 @@ export function Settings({
   consent,
   onAllow,
   onReject,
+  notify,
 }: Props) {
   const [target, setTarget] = useState(String(settings.target));
   const [free, setFree] = useState(String(settings.free));
@@ -38,6 +50,7 @@ export function Settings({
 
   return (
     <div className="cols">
+      <div className="grid">
       <div className="card">
         <h2 className="sub">Working day</h2>
         <p className="lead">Both in minutes. The exit time is the first punch-in plus the target plus every break minute that isn't free.</p>
@@ -72,6 +85,42 @@ export function Settings({
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <h2 className="sub">
+          <HeartIcon width={15} height={15} style={{ verticalAlign: "-2px", marginRight: 7 }} />
+          Health break rule
+        </h2>
+        <p className="lead">Reminders at 2h, 3h and 4h of continuous work, and the auto punch-out at 4h 15m.</p>
+
+        <div className="btn-row">
+          <button className={`btn${settings.health ? " primary" : ""}`} disabled={settings.health} onClick={() => onChange({ health: true })}>
+            On
+          </button>
+          <button className={`btn${settings.health ? "" : " primary"}`} disabled={!settings.health} onClick={() => onChange({ health: false })}>
+            Off
+          </button>
+        </div>
+
+        <div className={`preview ${settings.health ? "ok" : "idle"}`}>
+          {settings.health
+            ? "On — each reminder arrives as an alert, a notification and a short tone, with the reason it fired."
+            : "Off — no reminders are shown."}
+        </div>
+
+        <div className="btn-row" style={{ gridTemplateColumns: "1fr" }}>
+          <button
+            className="btn"
+            disabled={!settings.health || notify.state !== "default"}
+            onClick={() => void notify.request()}
+          >
+            <BellIcon width={15} height={15} />
+            {notify.state === "granted" ? "Browser notifications allowed" : "Allow browser notifications"}
+          </button>
+        </div>
+        <p className="hint">{NOTIFY_TEXT[notify.state]}</p>
+      </div>
       </div>
 
       <div className="grid">

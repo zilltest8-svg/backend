@@ -21,6 +21,8 @@ export interface Settings {
   target: number;
   /** Break minutes that do NOT push the exit time. */
   free: number;
+  /** The HR health break rule: reminders at 2h/3h/4h of continuous work, auto punch-out at 4h 15m. */
+  health: boolean;
 }
 
 /** Which stored day the calculator is looking at. */

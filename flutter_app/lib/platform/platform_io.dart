@@ -51,3 +51,12 @@ Future<bool> isReachable(String endpoint) async {
 String? legacyRead(String key) => null;
 
 void legacyRemove(String key) {}
+
+/// Desktop has no notification permission to ask for: the health reminders
+/// show as a banner in the window and play the system alert sound.
+String notifyPermission() => 'unsupported';
+
+Future<String> requestNotifyPermission() async => 'unsupported';
+
+/// Nothing to post to on desktop — the banner is the notification.
+bool notify(String title, String body, {String? tag}) => false;

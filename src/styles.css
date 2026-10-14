@@ -246,6 +246,24 @@ button { font-family: inherit; }
   color: var(--amber); font-size: 12px; font-weight: 600;
 }
 
+/* ---------- health break rule ---------- */
+/* The reminder banner: the same strip as the stale-data one, in rising strength. */
+.banner.health { align-items: flex-start; color: var(--ink); }
+.banner.health .health-text { flex: 1 1 320px; display: grid; gap: 4px; }
+.banner.health .health-text b { font-size: 13px; }
+.banner.health .health-text p { margin: 0; color: var(--dim); line-height: 1.55; }
+.banner.health .health-text span { color: var(--muted); font-size: 11.5px; line-height: 1.55; }
+.banner.health button { color: var(--ink); align-self: center; }
+.banner.health.info { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.16); }
+.banner.health.warn { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.28); }
+.banner.health.strong { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.5); }
+.banner.health.stop {
+  background: var(--ink); color: #000; border-color: var(--ink);
+}
+.banner.health.stop .health-text p, .banner.health.stop .health-text span { color: rgba(0, 0, 0, 0.72); }
+.banner.health.stop button { color: #000; background: rgba(0, 0, 0, 0.08); border-color: rgba(0, 0, 0, 0.4); }
+
+
 /* ---------- forms + buttons ---------- */
 label { display: block; color: var(--dim); font-size: 10.5px; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 8px; }
 input, textarea, select.select {

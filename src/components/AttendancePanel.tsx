@@ -80,7 +80,7 @@ export function AttendancePanel({ api, freeMinutes }: Props) {
   // and feeding a measurement in as an allowance would forgive every break and
   // pull the exit time earlier by exactly the length of it.
   const settings = useMemo(
-    () => ({ target: api.today?.targetMinutes ?? 480, free: freeMinutes }),
+    () => ({ target: api.today?.targetMinutes ?? 480, free: freeMinutes, health: true }),
     [api.today?.targetMinutes, freeMinutes],
   );
   const day = useMemo(

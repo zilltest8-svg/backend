@@ -79,6 +79,9 @@ void main() {
       // Open a stored day in the history list, then the sheet that edits it.
       state.setView(AppView.history);
       await _frames(tester);
+      // The fixture's open session has run for hours, so the health banner sits
+      // above the list and, on a phone-sized screen, pushes today's row below the fold.
+      await tester.ensureVisible(find.text(dayMonth(startOfToday())).first);
       await tester.tap(find.text(dayMonth(startOfToday())).first);
       await _frames(tester);
       await tester.ensureVisible(find.text('Edit day'));
