@@ -4,6 +4,7 @@ import 'package:chronos/core/time.dart';
 import 'package:chronos/main.dart';
 import 'package:chronos/state/app_state.dart';
 import 'package:chronos/state/attendance.dart';
+import 'package:chronos/ui/shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -89,6 +90,30 @@ void main() {
       await _shutdown(tester, state);
     });
   }
+
+  testWidgets('a phone gets tabs along the bottom instead of the side column', (tester) async {
+    final state = await _boot(tester, const Size(420, 900));
+    expect(find.byKey(bottomNavKey), findsOneWidget);
+    expect(find.byKey(sidebarKey), findsNothing);
+
+    // The tabs switch screens, and the one you are on is marked.
+    await tester.tap(find.descendant(of: find.byKey(bottomNavKey), matching: find.text('Insights')));
+    await _frames(tester);
+    expect(state.view, AppView.insights);
+    await tester.tap(find.descendant(of: find.byKey(bottomNavKey), matching: find.text('Settings')));
+    await _frames(tester);
+    expect(state.view, AppView.settings);
+    expect(find.text('Working day'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await _shutdown(tester, state);
+  });
+
+  testWidgets('a desktop keeps the side column and has no bottom bar', (tester) async {
+    final state = await _boot(tester, const Size(1400, 900));
+    expect(find.byKey(sidebarKey), findsOneWidget);
+    expect(find.byKey(bottomNavKey), findsNothing);
+    await _shutdown(tester, state);
+  });
 
   testWidgets('loaded punches are saved without being asked', (tester) async {
     SharedPreferences.setMockInitialValues({});

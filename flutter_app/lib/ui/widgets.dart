@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/time.dart';
 import '../core/verdict.dart' show Tone;
+import 'layout.dart';
 import 'theme.dart';
 
 export '../core/verdict.dart' show Tone;
@@ -118,11 +119,16 @@ class Reveal extends StatelessWidget {
 /* -------------------------------------------------------------------- cards */
 
 class AppCard extends StatefulWidget {
-  const AppCard({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.clip = false});
+  const AppCard({super.key, required this.child, this.padding, this.clip = false});
 
   final Widget child;
-  final EdgeInsets padding;
+
+  /// Null takes the standard inset, which is tighter on a phone.
+  final EdgeInsets? padding;
   final bool clip;
+
+  /// The inset a card's content sits at, for anything that pads itself.
+  static EdgeInsets inset(BuildContext context) => EdgeInsets.all(phone(context) ? 14 : 18);
 
   @override
   State<AppCard> createState() => _AppCardState();
@@ -141,7 +147,7 @@ class _AppCardState extends State<AppCard> {
       curve: ease,
       transform: Matrix4.translationValues(0, _hover ? -2 : 0, 0),
       width: double.infinity,
-      padding: widget.padding,
+      padding: widget.padding ?? AppCard.inset(context),
       clipBehavior: widget.clip ? Clip.antiAlias : Clip.none,
       decoration: raised(lift: _hover ? 1 : 0),
       child: widget.child,
@@ -920,63 +926,89 @@ class ModalShell extends StatelessWidget {
   final VoidCallback? onClose;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    child: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: wide ? 620 : 430),
-          child: Material(
-            color: C.card,
-            elevation: 30,
-            shadowColor: Colors.black,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: const BorderSide(color: C.line),
+  Widget build(BuildContext context) {
+    // On a phone the dialog is a sheet: full width, up from the bottom edge,
+    // rounded only at the top, and it rides up with the keyboard.
+    final sheet = phone(context);
+    final size = MediaQuery.sizeOf(context);
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final stacked = sheet && actions.length > 2;
+
+    return SafeArea(
+      child: Align(
+        alignment: sheet ? Alignment.bottomCenter : Alignment.center,
+        child: Padding(
+          padding: sheet ? EdgeInsets.only(bottom: keyboard) : const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: sheet ? double.infinity : (wide ? 620 : 430),
+              maxHeight: sheet ? size.height * 0.92 - keyboard : double.infinity,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      IconTile(icon, tone: tone),
-                      const SizedBox(width: 13),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, style: t(16, weight: FontWeight.w600)),
-                            const SizedBox(height: 4),
-                            Text(subtitle, style: t(12, color: C.muted, height: 1.5)),
-                          ],
+            child: Material(
+              color: C.card,
+              elevation: 30,
+              shadowColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: sheet ? const BorderRadius.vertical(top: Radius.circular(20)) : BorderRadius.circular(18),
+                side: const BorderSide(color: C.line),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: SingleChildScrollView(
+                padding: sheet ? const EdgeInsets.fromLTRB(18, 18, 18, 22) : const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IconTile(icon, tone: tone),
+                        const SizedBox(width: 13),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: t(16, weight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(subtitle, style: t(12, color: C.muted, height: 1.5)),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 13),
-                      XButton(onPressed: onClose, tooltip: 'Close'),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  ...body,
-                  const SizedBox(height: 26),
-                  Row(
-                    children: [
-                      for (final (i, action) in actions.indexed) ...[
-                        if (i > 0) const SizedBox(width: 10),
-                        Expanded(flex: i == actions.length - 1 ? 14 : 10, child: action),
+                        const SizedBox(width: 13),
+                        XButton(onPressed: onClose, tooltip: 'Close'),
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 18),
+                    ...body,
+                    const SizedBox(height: 26),
+                    // Three actions do not fit across a phone, so they stack, the
+                    // primary one first where the thumb is.
+                    if (stacked)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final (i, action) in actions.reversed.indexed) ...[
+                            if (i > 0) const SizedBox(height: 10),
+                            action,
+                          ],
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          for (final (i, action) in actions.indexed) ...[
+                            if (i > 0) const SizedBox(width: 10),
+                            Expanded(flex: i == actions.length - 1 ? 14 : 10, child: action),
+                          ],
+                        ],
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

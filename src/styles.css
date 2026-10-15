@@ -80,16 +80,6 @@ button { font-family: inherit; }
 }
 .topbar .day-chip b { color: var(--ink); font-weight: 600; }
 
-@media (max-width: 860px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: static; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap;
-    border-right: 0; border-bottom: 1px solid var(--line-2);
-  }
-  .brand { padding: 0 12px 0 0; }
-  .nav { flex-direction: row; flex-wrap: wrap; }
-  .side-foot { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
-}
 
 /* ---------- cards ---------- */
 .card {
@@ -348,10 +338,6 @@ select.select option { background: var(--card); color: var(--ink); }
   background: transparent; border: 1px solid var(--line-2); color: var(--muted);
 }
 .hist-x:hover { color: var(--red); border-color: rgba(217, 217, 217, 0.4); background: rgba(217, 217, 217, 0.08); }
-@media (max-width: 560px) {
-  .hist-pick { grid-template-columns: 1fr auto auto; }
-  .hist-pick .t { grid-column: 1 / -1; }
-}
 
 /* ---------- insights ---------- */
 .insight-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
@@ -696,4 +682,142 @@ select.select option { background: var(--card); color: var(--ink); }
   display: block; height: 100%; border-radius: 999px;
   background: linear-gradient(180deg, #ffffff, #9a9a9a);
   transition: width 1s linear;
+}
+
+/* ---------------------------------------------------------------- mobile */
+/* Below 860px the side column goes, and the phone gets what a phone expects:
+   a slim header with the brand and the sync light, and four tabs along the
+   bottom edge. Both are always in the DOM; this is what hides whichever one
+   the width does not need, so a resize never remounts anything. */
+.mobile-head, .bottom-nav { display: none; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+
+  .mobile-head {
+    position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top));
+    background: rgba(10, 10, 10, 0.92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-2);
+  }
+  .mobile-head .brand { padding: 0; flex: 1; min-width: 0; }
+  .mobile-head .brand .mark { width: 30px; height: 30px; border-radius: 9px; }
+  .mobile-head .brand b { font-size: 15px; }
+  .mobile-head .sync-status { padding: 7px 10px; gap: 8px; }
+  .mobile-head .sync-status b { font-size: 11.5px; }
+  .mobile-head .sync-status small { display: none; }
+
+  .main { padding: 14px 14px calc(88px + env(safe-area-inset-bottom)); gap: 14px; }
+
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    background: rgba(10, 10, 10, 0.94); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line-2);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+  }
+  .bottom-nav button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-height: 52px; padding: 6px 4px; border-radius: 12px; cursor: pointer;
+    background: transparent; border: 1px solid transparent; color: var(--muted);
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.16s, background 0.16s, transform 0.1s;
+  }
+  .bottom-nav button svg { width: 20px; height: 20px; }
+  /* The screen you are on is the key that stays pressed in, as in the sidebar. */
+  .bottom-nav button.on { color: var(--ink); background: var(--well); border-color: #000; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06); }
+  .bottom-nav button:active { transform: translateY(1px); }
+
+  .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
+}
+
+/* Phone density: tighter cards, one column, two-line rows, bottom-sheet modals. */
+@media (max-width: 640px) {
+  html { -webkit-text-size-adjust: 100%; }
+  .card { padding: 14px; border-radius: 14px; }
+  .card h2 { font-size: 14.5px; }
+  .card p.lead { font-size: 12px; }
+
+  /* timer */
+  .timer-body { justify-content: center; gap: 14px; text-align: center; }
+  .readout .counter { font-size: 32px; justify-content: center; }
+  .date-card .v { font-size: 20px; }
+  .leave-card { padding: 16px 14px; }
+  .leave-card .t { font-size: 30px; }
+
+  /* live attendance */
+  .hr-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .hr-actions { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 10px; }
+  .hr-actions .hr-field.inline { width: 100%; }
+  .hr-field.inline input { width: 100%; }
+  .hr-actions .btn { width: 100%; }
+  .hr-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hr-card { padding: 12px 13px; }
+  .hr-card .k { font-size: 10px; letter-spacing: 1.2px; }
+  .hr-card .v { font-size: 21px; margin: 6px 0 4px; }
+  .hr-card .s { font-size: 11px; }
+  .next-sync .label { width: auto; }
+
+  /* stats + status */
+  .stats { grid-template-columns: 1fr; gap: 10px; }
+  .stat.stat-key .v { font-size: 22px; }
+
+  /* sessions: no header row, each row on two lines */
+  .thead { display: none; }
+  .srow {
+    grid-template-columns: minmax(0, 1fr) auto 26px;
+    grid-template-areas: "type dur menu" "start end end";
+    row-gap: 6px; padding: 10px 12px 10px 14px;
+  }
+  .srow .type { grid-area: type; }
+  .srow > :nth-child(2) { grid-area: start; }
+  .srow > :nth-child(3) { grid-area: end; text-align: right; }
+  .srow > :nth-child(3)::before { content: "→ "; color: var(--muted); }
+  .srow > :nth-child(4) { grid-area: dur; }
+  .srow .menu-cell { grid-area: menu; }
+
+  /* history: a day on two lines — date and the two totals, then the times and its state */
+  .hist-rows { max-height: none; padding-right: 0; }
+  .hist-pick {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "d n1 n2" "t t state";
+    row-gap: 6px;
+  }
+  .hist-pick .d { grid-area: d; }
+  .hist-pick .d b { white-space: nowrap; }
+  .hist-pick .t { grid-area: t; }
+  .hist-pick .n.green { grid-area: n1; }
+  .hist-pick .n.amber { grid-area: n2; }
+  .hist-pick .state { grid-area: state; }
+  .hist-pick .state .chip { white-space: nowrap; }
+  .hist-actions .btn { flex: 1 1 auto; }
+  .mini-grid { grid-template-columns: 1fr; }
+
+  /* forms */
+  .pair { grid-template-columns: 1fr; }
+  .btn-row { grid-template-columns: 1fr; }
+  /* Below 16px iOS zooms the page in on focus; the mono look is kept, just larger. */
+  input, textarea, select.select { font-size: 16px; }
+  .sheet-row input { font-size: 14px; }
+
+  /* modals slide up from the bottom edge, as sheets */
+  .modal-scrim { place-items: end center; padding: 0; }
+  .modal, .modal.wide {
+    width: 100%; max-height: 92dvh; overflow-y: auto;
+    border-radius: 20px 20px 0 0; border-bottom: 0;
+  }
+  .modal-foot, .modal-foot.three { grid-template-columns: 1fr; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  .sheet-rows { max-height: 38dvh; }
+
+  .toast { left: 14px; right: 14px; max-width: none; }
+}
+
+/* A finger does not hover: no lifted cards or raised buttons left stuck on. */
+@media (hover: none) {
+  .card:hover, .hr-card:hover, .stat.stat-key:hover { transform: none; box-shadow: var(--lift); border-color: rgba(255, 255, 255, 0.07); }
+  .btn:hover:not(:disabled) { transform: none; }
 }

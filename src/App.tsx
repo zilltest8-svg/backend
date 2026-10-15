@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AttendancePanel } from "./components/AttendancePanel";
+import { BottomNav, MobileHeader } from "./components/BottomNav";
 import { DaySheetModal } from "./components/DaySheetModal";
 import { Efficiency } from "./components/Efficiency";
 import { Hero } from "./components/Hero";
@@ -203,6 +204,7 @@ export default function App() {
   return (
     <div className="app">
       <Sidebar view={view} onView={setView} running={running} api={attendance} />
+      <MobileHeader running={running} api={attendance} />
 
       <main className="main">
         <TopBar viewing={day.first} stale={day.stale} />
@@ -270,6 +272,8 @@ export default function App() {
           />
         )}
       </main>
+
+      <BottomNav view={view} onView={setView} />
 
       <DaySheetModal
         open={sheetKey != null}

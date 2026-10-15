@@ -12,6 +12,16 @@ class AppScope extends InheritedNotifier<AppState> {
   static AppState read(BuildContext context) => context.getInheritedWidgetOfExactType<AppScope>()!.notifier!;
 }
 
+/// Below this width the side column goes and the bottom bar comes.
+const double kMobileWidth = 860;
+
+/// Below this width the screens take their phone density: tighter cards, one
+/// column, two-line rows, modals as sheets from the bottom edge.
+const double kPhoneWidth = 640;
+
+/// True on a phone-sized window — the density switch the widgets read.
+bool phone(BuildContext context) => MediaQuery.sizeOf(context).width < kPhoneWidth;
+
 /// The dashboard's two columns: the main one flexes, the side one is fixed, and
 /// on anything narrow they stack.
 class Cols extends StatelessWidget {

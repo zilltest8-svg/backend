@@ -751,22 +751,37 @@ class _SettingsPageState extends State<SettingsPage> {
     _mirror(_target, _targetFocus, '${settings.target}');
     _mirror(_free, _freeFocus, '${settings.free}');
 
-    Widget number(String label, TextEditingController c, FocusNode f, VoidCallback commit, String hint) => Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FieldLabel(label),
-          TextField(
-            controller: c,
-            focusNode: f,
-            keyboardType: TextInputType.number,
-            style: m(13),
-            decoration: inputDecoration(),
-            onSubmitted: (_) => commit(),
-          ),
-          Hint(hint),
-        ],
-      ),
+    Widget number(String label, TextEditingController c, FocusNode f, VoidCallback commit, String hint) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FieldLabel(label),
+        TextField(
+          controller: c,
+          focusNode: f,
+          keyboardType: TextInputType.number,
+          style: m(13),
+          decoration: inputDecoration(),
+          onSubmitted: (_) => commit(),
+        ),
+        Hint(hint),
+      ],
+    );
+
+    final target = number(
+      'Work target',
+      _target,
+      _targetFocus,
+      _commitTarget,
+      '${hm(settings.target * kMin)} of actual work owed.',
+    );
+    final free = number(
+      'Free break',
+      _free,
+      _freeFocus,
+      _commitFree,
+      settings.free > 0
+          ? "First ${settings.free} break minutes don't push the exit."
+          : 'Every break minute pushes the exit.',
     );
 
     return Cols(
@@ -782,28 +797,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   "Both in minutes. The exit time is the first punch-in plus the target plus every break minute that isn't free.",
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    number(
-                      'Work target',
-                      _target,
-                      _targetFocus,
-                      _commitTarget,
-                      '${hm(settings.target * kMin)} of actual work owed.',
-                    ),
-                    const SizedBox(width: 12),
-                    number(
-                      'Free break',
-                      _free,
-                      _freeFocus,
-                      _commitFree,
-                      settings.free > 0
-                          ? "First ${settings.free} break minutes don't push the exit."
-                          : 'Every break minute pushes the exit.',
-                    ),
-                  ],
-                ),
+                // Side by side on a desktop; one under the other on a phone.
+                if (phone(context))
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [target, const SizedBox(height: 14), free],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: target),
+                      const SizedBox(width: 12),
+                      Expanded(child: free),
+                    ],
+                  ),
               ],
             ),
           ),

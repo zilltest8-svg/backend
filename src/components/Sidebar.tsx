@@ -11,7 +11,7 @@ import { clockShort } from "../time";
 
 export type View = "dashboard" | "insights" | "history" | "settings";
 
-const NAV: { id: View; label: string; icon: ReactNode }[] = [
+export const NAV: { id: View; label: string; icon: ReactNode }[] = [
   { id: "dashboard", label: "Dashboard", icon: <GridIcon width={17} height={17} /> },
   { id: "insights", label: "Insights", icon: <TrendIcon width={17} height={17} /> },
   { id: "history", label: "History", icon: <HistoryIcon width={17} height={17} /> },
@@ -29,7 +29,7 @@ interface Props {
  * Where the timer button used to be: punches now come from the HR API by
  * themselves, so what is worth a permanent place is whether that is working.
  */
-function SyncStatus({ api }: { api: AttendanceApi }) {
+export function SyncStatus({ api }: { api: AttendanceApi }) {
   const signedIn = api.auth === "signed-in";
   const failed = signedIn && (api.error ?? api.syncError) != null;
   const title = !signedIn

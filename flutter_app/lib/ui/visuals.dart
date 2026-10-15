@@ -296,14 +296,15 @@ class _RingPainter extends CustomPainter {
 
 /// `7:32:09`, each place sliding up as it changes.
 class Counter extends StatelessWidget {
-  const Counter({super.key, required this.parts, required this.done});
+  const Counter({super.key, required this.parts, required this.done, this.size = 40});
 
   final List<String> parts;
   final bool done;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final style = m(40, color: done ? C.green : C.ink, weight: FontWeight.w600, spacing: -1.5);
+    final style = m(size, color: done ? C.green : C.ink, weight: FontWeight.w600, spacing: -1.5);
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.baseline,

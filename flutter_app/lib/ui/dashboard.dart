@@ -141,63 +141,93 @@ class _AttendancePanelState extends State<AttendancePanel> {
     final sync = api.sync;
     final problem = api.error ?? api.syncError;
 
+    final tight = phone(context);
+
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const H2('Live attendance', leading: IconTile(Icons.timer_outlined, tone: TileTone.violet, small: true)),
+        const SizedBox(height: 6),
+        Text(
+          [
+            api.user?.name ?? api.user?.email ?? 'Signed in',
+            if (api.today?.status != null) api.today!.status!,
+            if (api.fetchedAt != null) 'updated ${clockShort(api.fetchedAt)}',
+          ].join(' · '),
+          style: t(12, color: C.muted),
+        ),
+      ],
+    );
+    final from = _RangeField(
+      label: 'Sync from',
+      value: api.startDate,
+      max: api.endDate,
+      width: tight ? null : 148,
+      onChanged: (v) => api.setRange(v, api.endDate),
+    );
+    final to = _RangeField(
+      label: 'To',
+      value: api.endDate,
+      min: api.startDate,
+      width: tight ? null : 148,
+      onChanged: (v) => api.setRange(api.startDate, v),
+    );
+    final syncNow = Btn(
+      api.syncing ? 'Syncing…' : 'Sync now',
+      icon: Icons.timer_outlined,
+      kind: BtnKind.primary,
+      small: true,
+      wide: tight,
+      tooltip: 'Do not wait for the next automatic sync — pull ${api.startDate} to ${api.endDate} now',
+      onPressed: api.syncing ? null : api.startSync,
+    );
+    final signOut = Btn('Sign out', kind: BtnKind.ghost, small: true, wide: tight, onPressed: api.signOut);
+
     return Gap(
       children: [
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.end,
-          spacing: 16,
-          runSpacing: 12,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const H2(
-                  'Live attendance',
-                  leading: IconTile(Icons.timer_outlined, tone: TileTone.violet, small: true),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    api.user?.name ?? api.user?.email ?? 'Signed in',
-                    if (api.today?.status != null) api.today!.status!,
-                    if (api.fetchedAt != null) 'updated ${clockShort(api.fetchedAt)}',
-                  ].join(' · '),
-                  style: t(12, color: C.muted),
-                ),
-              ],
-            ),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _RangeField(
-                  label: 'Sync from',
-                  value: api.startDate,
-                  max: api.endDate,
-                  onChanged: (v) => api.setRange(v, api.endDate),
-                ),
-                _RangeField(
-                  label: 'To',
-                  value: api.endDate,
-                  min: api.startDate,
-                  onChanged: (v) => api.setRange(api.startDate, v),
-                ),
-                Btn(
-                  api.syncing ? 'Syncing…' : 'Sync now',
-                  icon: Icons.timer_outlined,
-                  kind: BtnKind.primary,
-                  small: true,
-                  tooltip: 'Do not wait for the next automatic sync — pull ${api.startDate} to ${api.endDate} now',
-                  onPressed: api.syncing ? null : api.startSync,
-                ),
-                Btn('Sign out', kind: BtnKind.ghost, small: true, onPressed: api.signOut),
-              ],
-            ),
-          ],
-        ),
+        // On a phone the title, the two dates and the two buttons stack in
+        // rows that fill the width; on anything wider they share one line.
+        if (tight)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              title,
+              const SizedBox(height: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: from),
+                  const SizedBox(width: 10),
+                  Expanded(child: to),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: syncNow),
+                  const SizedBox(width: 10),
+                  Expanded(child: signOut),
+                ],
+              ),
+            ],
+          )
+        else
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: 16,
+            runSpacing: 12,
+            children: [
+              title,
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.end,
+                spacing: 10,
+                runSpacing: 10,
+                children: [from, to, syncNow, signOut],
+              ),
+            ],
+          ),
         _NextSyncBar(api: api, now: widget.now),
         if (problem != null)
           Preview(
@@ -230,8 +260,10 @@ class _AttendancePanelState extends State<AttendancePanel> {
                 ),
             ],
           ),
+        // Two tiles across a phone, as many as fit on a desktop.
         AutoGrid(
-          minWidth: 210,
+          minWidth: tight ? 140 : 210,
+          gap: tight ? 10 : 14,
           children: [
             for (final (i, c) in cells.indexed)
               Entrance(
@@ -239,21 +271,29 @@ class _AttendancePanelState extends State<AttendancePanel> {
                 dy: 10,
                 ms: 400,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                  padding: tight
+                      ? const EdgeInsets.symmetric(horizontal: 13, vertical: 12)
+                      : const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                   decoration: raised(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Kicker(c.label, spacing: 1.6),
-                      const SizedBox(height: 10),
+                      Kicker(c.label, size: tight ? 10 : 10.5, spacing: tight ? 1.2 : 1.6),
+                      SizedBox(height: tight ? 6 : 10),
                       ValueWithTail(
                         api.loading && api.today == null ? '…' : c.value,
                         tail: api.loading && api.today == null ? null : c.tail,
                         tailScale: 0.55,
-                        style: t(26, color: c.tone ?? C.ink, weight: FontWeight.w600, spacing: -0.6, height: 1.2),
+                        style: t(
+                          tight ? 21 : 26,
+                          color: c.tone ?? C.ink,
+                          weight: FontWeight.w600,
+                          spacing: -0.6,
+                          height: 1.2,
+                        ),
                       ),
-                      const SizedBox(height: 7),
-                      Text(c.note, style: t(11.5, color: C.muted)),
+                      SizedBox(height: tight ? 4 : 7),
+                      Text(c.note, style: t(tight ? 11 : 11.5, color: C.muted)),
                     ],
                   ),
                 ),
@@ -360,7 +400,14 @@ class _AttendancePanelState extends State<AttendancePanel> {
 }
 
 class _RangeField extends StatelessWidget {
-  const _RangeField({required this.label, required this.value, required this.onChanged, this.min, this.max});
+  const _RangeField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.min,
+    this.max,
+    this.width = 148,
+  });
 
   final String label;
   final String value;
@@ -368,18 +415,21 @@ class _RangeField extends StatelessWidget {
   final String? max;
   final ValueChanged<String> onChanged;
 
+  /// Null fills whatever the parent gives it — a phone's half-row.
+  final double? width;
+
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 148,
-    child: Column(
+  Widget build(BuildContext context) {
+    final field = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         FieldLabel(label),
         DateField(value: value, min: min, max: max, dense: true, onChanged: onChanged),
       ],
-    ),
-  );
+    );
+    return width == null ? field : SizedBox(width: width, child: field);
+  }
 }
 
 /// How long until the next automatic sync, as a bar that fills over the minute
@@ -495,6 +545,9 @@ class DayHero extends StatelessWidget {
             ),
           ];
 
+    // On a phone the ring and the figure sit centred, one above the other.
+    final tight = phone(context);
+
     final timer = Entrance(
       child: AppCard(
         clip: true,
@@ -502,7 +555,7 @@ class DayHero extends StatelessWidget {
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.all(18),
+              padding: AppCard.inset(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -523,19 +576,21 @@ class DayHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Wrap(
+                    alignment: tight ? WrapAlignment.center : WrapAlignment.start,
                     crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 22,
+                    spacing: tight ? 14 : 22,
                     runSpacing: 14,
                     children: [
                       TimerRing(value: day.frac, tone: tone, live: live && day.status == DayStatus.working),
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: tight ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Counter(parts: hmsParts(day.office), done: day.reached && hasData),
+                          Counter(parts: hmsParts(day.office), done: day.reached && hasData, size: tight ? 32 : 40),
                           const SizedBox(height: 7),
                           Text.rich(
                             TextSpan(children: sub),
+                            textAlign: tight ? TextAlign.center : TextAlign.start,
                             style: t(12, color: C.muted),
                           ),
                         ],
@@ -725,48 +780,60 @@ class SessionTable extends StatelessWidget {
     return Entrance(
       delay: 0.08,
       child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CardHead(
-              title: const H2('Sessions & Breaks'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Btn('Add Manual', icon: Icons.add, kind: BtnKind.ghost, small: true, onPressed: onAdd),
-                  const SizedBox(width: 8),
-                  DriveButton(sheet: sheet, label: 'Save Day'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: _SessionGrid(
-                type: Text('Type', style: _headStyle),
-                start: Text('In / Start', style: _headStyle),
-                end: Text('Out / End', style: _headStyle),
-                length: Text('Duration', textAlign: TextAlign.right, style: _headStyle),
-                menu: const SizedBox.shrink(),
-              ),
-            ),
-            const Divider(height: 1, color: C.line2),
-            const SizedBox(height: 8),
-            if (rows.isEmpty)
-              const EmptyRow('No sessions yet — they arrive with the next HR sync, or add one manually.'),
-            for (final (i, (block, caption)) in rows.indexed)
-              Padding(
-                key: ValueKey('${block.kind}-${block.from}'),
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Entrance(
-                  dx: -10,
-                  dy: 0,
-                  ms: 280,
-                  delay: (i * 0.04).clamp(0, 0.2).toDouble(),
-                  child: _SessionRow(block: block, caption: caption, ticking: !day.stale, onDelete: onDelete),
+        child: LayoutBuilder(
+          builder: (context, box) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CardHead(
+                title: const H2('Sessions & Breaks'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Btn('Add Manual', icon: Icons.add, kind: BtnKind.ghost, small: true, onPressed: onAdd),
+                    const SizedBox(width: 8),
+                    DriveButton(sheet: sheet, label: 'Save Day'),
+                  ],
                 ),
               ),
-          ],
+              const SizedBox(height: 14),
+              // A two-line row carries its own labels, so the header is for the wide table only.
+              if (!_SessionGrid.isNarrow(box.maxWidth)) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: _SessionGrid(
+                    narrow: false,
+                    type: Text('Type', style: _headStyle),
+                    start: Text('In / Start', style: _headStyle),
+                    end: Text('Out / End', style: _headStyle),
+                    length: Text('Duration', textAlign: TextAlign.right, style: _headStyle),
+                    menu: const SizedBox.shrink(),
+                  ),
+                ),
+                const Divider(height: 1, color: C.line2),
+                const SizedBox(height: 8),
+              ],
+              if (rows.isEmpty)
+                const EmptyRow('No sessions yet — they arrive with the next HR sync, or add one manually.'),
+              for (final (i, (block, caption)) in rows.indexed)
+                Padding(
+                  key: ValueKey('${block.kind}-${block.from}'),
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Entrance(
+                    dx: -10,
+                    dy: 0,
+                    ms: 280,
+                    delay: (i * 0.04).clamp(0, 0.2).toDouble(),
+                    child: _SessionRow(
+                      block: block,
+                      caption: caption,
+                      ticking: !day.stale,
+                      narrow: _SessionGrid.isNarrow(box.maxWidth),
+                      onDelete: onDelete,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -775,7 +842,8 @@ class SessionTable extends StatelessWidget {
 
 final _headStyle = t(11, color: C.muted, weight: FontWeight.w600);
 
-/// The table's five columns, shared by the header and every row.
+/// The table's five columns, shared by the header and every row. Too narrow
+/// for five, a row goes onto two lines: what and how long, then from → to.
 class _SessionGrid extends StatelessWidget {
   const _SessionGrid({
     required this.type,
@@ -783,6 +851,7 @@ class _SessionGrid extends StatelessWidget {
     required this.end,
     required this.length,
     required this.menu,
+    required this.narrow,
   });
 
   final Widget type;
@@ -791,24 +860,62 @@ class _SessionGrid extends StatelessWidget {
   final Widget length;
   final Widget menu;
 
+  /// Two lines rather than five columns. Decided by the table, not here: a row
+  /// sits in an IntrinsicHeight, which cannot hold a LayoutBuilder.
+  final bool narrow;
+
+  static bool isNarrow(double width) => width < 460;
+
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(flex: 15, child: type),
-      const SizedBox(width: 10),
-      Expanded(flex: 10, child: start),
-      const SizedBox(width: 10),
-      Expanded(flex: 10, child: end),
-      const SizedBox(width: 10),
-      Expanded(flex: 8, child: length),
-      const SizedBox(width: 10),
-      SizedBox(width: 26, child: menu),
-    ],
-  );
+  Widget build(BuildContext context) => narrow
+      ? Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(child: type),
+                const SizedBox(width: 10),
+                length,
+                const SizedBox(width: 6),
+                SizedBox(width: 26, child: menu),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                start,
+                const Spacer(),
+                Text('→ ', style: m(12, color: C.muted)),
+                end,
+              ],
+            ),
+          ],
+        )
+      : Row(
+          children: [
+            Expanded(flex: 15, child: type),
+            const SizedBox(width: 10),
+            Expanded(flex: 10, child: start),
+            const SizedBox(width: 10),
+            Expanded(flex: 10, child: end),
+            const SizedBox(width: 10),
+            Expanded(flex: 8, child: length),
+            const SizedBox(width: 10),
+            SizedBox(width: 26, child: menu),
+          ],
+        );
 }
 
 class _SessionRow extends StatelessWidget {
-  const _SessionRow({required this.block, required this.caption, required this.ticking, required this.onDelete});
+  const _SessionRow({
+    required this.block,
+    required this.caption,
+    required this.ticking,
+    required this.narrow,
+    required this.onDelete,
+  });
+
+  final bool narrow;
 
   final Block block;
   final String caption;
@@ -841,6 +948,7 @@ class _SessionRow extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(9, 11, 12, 11),
                 child: _SessionGrid(
+                  narrow: narrow,
                   type: Row(
                     children: [
                       Dot(isBreak ? C.amber : C.green),
