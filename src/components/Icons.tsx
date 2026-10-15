@@ -216,16 +216,3 @@ export const DotsIcon = (p: P) => (
     <circle cx="12" cy="19" r="1" />
   </svg>
 );
-
-export const HeartIcon = (p: P) => (
-  <svg {...base(p)}>
-    <path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.4-7.5 10-7.5 10z" />
-  </svg>
-);
-
-export const BellIcon = (p: P) => (
-  <svg {...base(p)}>
-    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
-    <path d="M10 20a2 2 0 0 0 4 0" />
-  </svg>
-);

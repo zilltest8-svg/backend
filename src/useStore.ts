@@ -16,7 +16,7 @@ export interface Store {
 
 const DEFAULTS: Store = {
   sessions: [],
-  settings: { target: 480, free: 0, health: true },
+  settings: { target: 480, free: 0 },
   filter: { month: "all", day: "latest" },
   meta: {},
 };
@@ -123,7 +123,7 @@ function readRaw(): Store {
         return {
           ...DEFAULTS,
           sessions: v1.sessions,
-          settings: { target: v1.target ?? 480, free: v1.free ?? 0, health: true },
+          settings: { target: v1.target ?? 480, free: v1.free ?? 0 },
           meta: seedMeta(v1.sessions),
         };
       }

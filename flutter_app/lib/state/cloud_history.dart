@@ -94,7 +94,7 @@ class CloudSnapshot {
 
 /// Everything about the owner that is not a day: `users/{owner}` itself.
 ///
-///     settings: {target, free, health}
+///     settings: {target, free}
 ///     sheet:    {url, id, file}   the Google Drive connection and its last export
 class CloudProfile {
   const CloudProfile({required this.data, required this.exists, required this.first});

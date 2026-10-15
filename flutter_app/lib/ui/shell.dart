@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../core/health_rule.dart';
 import '../core/time.dart';
 import '../state/app_state.dart';
 import '../state/attendance.dart';
 import 'dashboard.dart';
 import 'dialogs.dart';
-import 'health.dart';
 import 'layout.dart';
 import 'pages.dart';
 import 'theme.dart';
@@ -67,22 +65,6 @@ class _ShellState extends State<Shell> {
           Reveal(
             open: day.stale && day.first != null && !app.browsing,
             child: _StaleBanner(first: day.first, onShift: app.shiftSelectedToToday),
-          ),
-          // The health reminder follows you to every view: a break is due
-          // whatever you are looking at.
-          Reveal(
-            open: app.healthBanner != null,
-            child: app.healthBanner == null
-                ? const SizedBox.shrink()
-                : HealthNote(
-                    app.healthBanner!,
-                    trailing: Btn(
-                      'Dismiss',
-                      small: true,
-                      kind: app.healthBanner!.tone == HealthTone.stop ? BtnKind.primary : BtnKind.normal,
-                      onPressed: app.dismissHealth,
-                    ),
-                  ),
           ),
           // One screen fades and lifts in as the last fades out, instead of cutting.
           AnimatedSwitcher(

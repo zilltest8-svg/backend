@@ -3,7 +3,7 @@
  * (flutter_app/lib/state/cloud_history.dart), so both read each other's data:
  *
  *     users/{owner}                          the profile
- *       settings:    {target, free, health}
+ *       settings:    {target, free}
  *       sheet:       {url, id, file}         the Drive connection and its last export
  *     users/{owner}/days/{YYYY-MM-DD}        one document per stored day
  *       sessions:    [{id, in, out}]

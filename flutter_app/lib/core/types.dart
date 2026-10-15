@@ -41,7 +41,7 @@ class Block {
 }
 
 class Settings {
-  const Settings({this.target = 480, this.free = 0, this.health = true});
+  const Settings({this.target = 480, this.free = 0});
 
   /// Minutes of actual work owed (480 = 8h).
   final int target;
@@ -49,25 +49,15 @@ class Settings {
   /// Break minutes that do NOT push the exit time.
   final int free;
 
-  /// The HR health break rule: reminders at 2h/3h/4h of continuous work, auto punch-out at 4h 15m.
-  final bool health;
+  Settings copyWith({int? target, int? free}) => Settings(target: target ?? this.target, free: free ?? this.free);
 
-  Settings copyWith({int? target, int? free, bool? health}) =>
-      Settings(target: target ?? this.target, free: free ?? this.free, health: health ?? this.health);
-
-  Map<String, dynamic> toJson() => {'target': target, 'free': free, 'health': health};
+  Map<String, dynamic> toJson() => {'target': target, 'free': free};
 
   static Settings fromJson(Object? raw) {
     if (raw is! Map) return const Settings();
     final target = raw['target'];
     final free = raw['free'];
-    final health = raw['health'];
-    return Settings(
-      target: target is num ? target.round() : 480,
-      free: free is num ? free.round() : 0,
-      // Written before the rule existed: on, as for a fresh install.
-      health: health is bool ? health : true,
-    );
+    return Settings(target: target is num ? target.round() : 480, free: free is num ? free.round() : 0);
   }
 }
 

@@ -127,10 +127,8 @@ export function useCloud({ store, applyRemote, replaceSettings, sheet, email, ca
     const { store: s, sheet: sh } = latest.current;
     const settings = profile.data.settings as Partial<Settings> | undefined;
     if (settings && typeof settings.target === "number" && typeof settings.free === "number") {
-      // A profile written before the health rule existed has no `health`; keep this browser's.
-      const health = typeof settings.health === "boolean" ? settings.health : s.settings.health;
-      if (settings.target !== s.settings.target || settings.free !== s.settings.free || health !== s.settings.health) {
-        latest.current.replaceSettings({ target: settings.target, free: settings.free, health });
+      if (settings.target !== s.settings.target || settings.free !== s.settings.free) {
+        latest.current.replaceSettings({ target: settings.target, free: settings.free });
       }
     }
     const remoteSheet = profile.data.sheet as Partial<{ url: string; id: string; file: string }> | undefined;

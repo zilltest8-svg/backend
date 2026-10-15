@@ -17,7 +17,6 @@ import { Toast, type ToastAction, type ToastMsg } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
 import { computeDay, mergeSessions, parsePayload, replaceDay, shiftToToday } from "./compute";
 import { saveBlob } from "./export";
-import { assessHealth } from "./healthRule";
 import { buildHistory, resolveDay, totalsOf, type DayEntry } from "./history";
 import { historyPdf, historyPdfFilename } from "./historyPdf";
 import { MIN, dateLabel, dayKey, minutesFromInput, startOfDayKey, startOfToday } from "./time";
@@ -25,7 +24,6 @@ import type { Session } from "./types";
 import { useAttendance } from "./useAttendance";
 import { useCloud } from "./useCloud";
 import { useConsent } from "./useConsent";
-import { useHealthAlerts } from "./useHealthAlerts";
 import { useSheet } from "./useSheet";
 import { useNow, useStore } from "./useStore";
 
@@ -121,16 +119,6 @@ export default function App() {
 
   const sheet = useSheet(day, say, canPersist);
   const attendance = useAttendance(say);
-
-  // The HR health break rule, read off the same day: it never changes a punch,
-  // it says why the system is about to act — or just did.
-  const health = useMemo(() => assessHealth(day, store.settings), [day, store.settings]);
-  const alerts = useHealthAlerts({
-    health,
-    enabled: store.settings.health,
-    stale: day.stale,
-    dayKey: selected?.key ?? "",
-  });
   // History, settings and the sheet connection live in Firestore too, under
   // the signed-in HR account (or this browser until someone signs in).
   useCloud({ store, applyRemote, replaceSettings, sheet, email: attendance.user?.email, canPersist, say });
@@ -236,27 +224,6 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        <AnimatePresence>
-          {/* The health reminder follows you to every view: a break is due whatever you are looking at. */}
-          {alerts.banner && (
-            <motion.div
-              key={`${alerts.banner.stage}-${health.streakStart ?? "out"}`}
-              className={`banner health ${alerts.banner.tone}`}
-              role="alert"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="health-text">
-                <b>{alerts.banner.title}</b>
-                <p>{alerts.banner.message}</p>
-                <span>{alerts.banner.why}</span>
-              </div>
-              <button onClick={alerts.dismiss}>Dismiss</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {view === "dashboard" && (
           <>
             <AttendancePanel api={attendance} freeMinutes={store.settings.free} />
@@ -300,7 +267,6 @@ export default function App() {
             consent={consent}
             onAllow={handleAllow}
             onReject={handleReject}
-            notify={alerts.notify}
           />
         )}
       </main>

@@ -118,36 +118,6 @@ itself — nothing in the app depends on WebGL being there.
 
 Three.js is why `dist/index.html` is ~890 kB (~247 kB gzipped) rather than ~360 kB.
 
-## Health break rule
-
-The HR system enforces a break policy, and the app mirrors it so that every
-reminder — and the punch-out — comes with its reason. **Settings → Health break
-rule** switches it on and off (on by default; the choice syncs with the other
-settings).
-
-| Continuous work | What happens |
-| --- | --- |
-| **2h** | a friendly reminder to get up, stretch and take a short break |
-| **3h** | another gentle reminder to step away and recharge |
-| **4h** | a stronger reminder to stop and rest |
-| **4h 15m** | the system punches you out; a 30-minute break is required before returning |
-
-A break counts only if it is **15 minutes or longer** — that is what resets the
-continuous-work timer. A shorter gap is ignored: the timer keeps running through
-it. **1 hour** of counted break is expected per 8 hours of work target, in one
-go or split into 15+ minute breaks.
-
-When a threshold is reached the alert says what to do and *why* — how long you
-have worked, since when, what did not count, and what comes next — as a banner
-across the top of every view, a browser notification (once allowed in Settings)
-and a short tone. Each reminder is announced once per stretch. After a punch-out
-that followed a 4h 15m stretch, the banner carries the HR system's own message
-and counts down the 30 minutes of rest still owed. There is nothing else on
-screen for it: no card, no timer — only the alerts.
-
-The rule only observes: it never edits a punch, and the exit-time calculation is
-untouched. Stored days never alert.
-
 ## Cookies & storage
 
 Saving is automatic: punches, settings and the Apps Script connection are
@@ -327,8 +297,6 @@ src/
   useAttendance.ts       sign-in, date range, and the fetch's loading/error state
   three/useScene.ts      renderer, resize, frame loop and disposal for every canvas
   verdict.ts             the one-line read on the day, shown in the status bar
-  healthRule.ts          the HR health break rule: continuous-work stretches, reminders, auto punch-out
-  useHealthAlerts.ts     announces each reminder once — banner, browser notification, tone
   App.tsx                shell, view switching, handlers
   components/
     Logo.tsx             the mark — the timer ring reduced to 20px
@@ -343,7 +311,7 @@ src/
     Insights.tsx         per-day facts + totals across stored days
     HistoryPanel.tsx     month/day filter, stored days, tap to open one up
     DaySheetModal.tsx    the editable day sheet — punches, breaks, totals, submit
-    Settings.tsx         work target, free break, health break rule, storage on/off, clear stored data
+    Settings.tsx         work target, free break, storage on/off, clear stored data
     TimerRing3D.tsx      the WebGL progress ring
     DayBars3D.tsx        work and break columns per stored day
     Icons.tsx            inline SVG icon set
